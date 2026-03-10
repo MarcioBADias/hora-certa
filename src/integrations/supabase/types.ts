@@ -14,7 +14,126 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      hour_bank: {
+        Row: {
+          created_at: string
+          date: string
+          description: string | null
+          expires_at: string | null
+          hours: number
+          id: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          description?: string | null
+          expires_at?: string | null
+          hours: number
+          id?: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          description?: string | null
+          expires_at?: string | null
+          hours?: number
+          id?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      time_entries: {
+        Row: {
+          created_at: string
+          date: string
+          entry_time: string
+          entry_type: string
+          exit_time: string
+          id: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          entry_time: string
+          entry_type?: string
+          exit_time: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          entry_time?: string
+          entry_type?: string
+          exit_time?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          bank_expiration_days: number
+          break_duration_hours: number
+          break_threshold_hours: number
+          closing_time: string
+          created_at: string
+          hourly_rate: number | null
+          id: string
+          max_daily_overtime: number
+          max_monthly_paid_overtime: number
+          opening_time: string
+          updated_at: string
+          user_id: string
+          weekly_hours: number
+          work_days: Json
+        }
+        Insert: {
+          bank_expiration_days?: number
+          break_duration_hours?: number
+          break_threshold_hours?: number
+          closing_time?: string
+          created_at?: string
+          hourly_rate?: number | null
+          id?: string
+          max_daily_overtime?: number
+          max_monthly_paid_overtime?: number
+          opening_time?: string
+          updated_at?: string
+          user_id: string
+          weekly_hours?: number
+          work_days?: Json
+        }
+        Update: {
+          bank_expiration_days?: number
+          break_duration_hours?: number
+          break_threshold_hours?: number
+          closing_time?: string
+          created_at?: string
+          hourly_rate?: number | null
+          id?: string
+          max_daily_overtime?: number
+          max_monthly_paid_overtime?: number
+          opening_time?: string
+          updated_at?: string
+          user_id?: string
+          weekly_hours?: number
+          work_days?: Json
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
