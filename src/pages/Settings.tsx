@@ -26,6 +26,13 @@ const Settings = () => {
   const [breakThreshold, setBreakThreshold] = useState(7);
   const [breakDuration, setBreakDuration] = useState(1);
   const [hourlyRate, setHourlyRate] = useState<string>('');
+  const [monthlySalary, setMonthlySalary] = useState<string>('');
+
+  // Calcula valor/hora: salário / (horas semanais * 52 / 12)
+  const monthlyDivisor = weeklyHours * (52 / 12);
+  const calculatedHourlyRate = monthlySalary && monthlyDivisor > 0
+    ? (parseFloat(monthlySalary) / monthlyDivisor)
+    : null;
 
   useEffect(() => {
     if (settings) {
@@ -39,6 +46,7 @@ const Settings = () => {
       setBreakThreshold(settings.break_threshold_hours);
       setBreakDuration(settings.break_duration_hours);
       setHourlyRate(settings.hourly_rate?.toString() || '');
+      setMonthlySalary((settings as any).monthly_salary?.toString() || '');
     }
   }, [settings]);
 
@@ -56,6 +64,10 @@ const Settings = () => {
 
   const handleSave = async () => {
     try {
+      const computedRate = calculatedHourlyRate !== null
+        ? Math.round(calculatedHourlyRate * 100) / 100
+        : (hourlyRate ? parseFloat(hourlyRate) : null);
+
       await saveSettings.mutateAsync({
         weekly_hours: weeklyHours,
         work_days: workDays,
@@ -66,8 +78,9 @@ const Settings = () => {
         bank_expiration_days: bankExpirationDays,
         break_threshold_hours: breakThreshold,
         break_duration_hours: breakDuration,
-        hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
-      });
+        hourly_rate: computedRate,
+        monthly_salary: monthlySalary ? parseFloat(monthlySalary) : null,
+      } as any);
       toast.success('Configurações salvas!');
     } catch {
       toast.error('Erro ao salvar configurações');
@@ -102,9 +115,23 @@ const Settings = () => {
                 <Label>Horas semanais</Label>
                 <Input type="number" value={weeklyHours} onChange={e => setWeeklyHours(Number(e.target.value))} min={1} max={60} />
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 items-end">
               <div>
-                <Label>Valor/hora (R$)</Label>
-                <Input type="number" placeholder="Opcional" value={hourlyRate} onChange={e => setHourlyRate(e.target.value)} min={0} step="0.01" />
+                <Label>Salário mensal (R$)</Label>
+                <Input type="number" placeholder="Ex: 3000" value={monthlySalary} onChange={e => setMonthlySalary(e.target.value)} min={0} step="0.01" />
+              </div>
+              <div className="rounded-lg border border-border bg-muted/50 p-3">
+                <p className="text-xs text-muted-foreground">Valor/hora calculado</p>
+                <p className="text-lg font-bold text-primary">
+                  {calculatedHourlyRate !== null
+                    ? `R$ ${calculatedHourlyRate.toFixed(2)}`
+                    : '—'}
+                </p>
+                {monthlyDivisor > 0 && (
+                  <p className="text-[10px] text-muted-foreground">Divisor: {monthlyDivisor.toFixed(1)}h/mês</p>
+                )}
               </div>
             </div>
 

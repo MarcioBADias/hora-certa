@@ -94,6 +94,7 @@ export type Database = {
           id: string
           max_daily_overtime: number
           max_monthly_paid_overtime: number
+          monthly_salary: number | null
           opening_time: string
           updated_at: string
           user_id: string
@@ -110,6 +111,7 @@ export type Database = {
           id?: string
           max_daily_overtime?: number
           max_monthly_paid_overtime?: number
+          monthly_salary?: number | null
           opening_time?: string
           updated_at?: string
           user_id: string
@@ -126,6 +128,7 @@ export type Database = {
           id?: string
           max_daily_overtime?: number
           max_monthly_paid_overtime?: number
+          monthly_salary?: number | null
           opening_time?: string
           updated_at?: string
           user_id?: string
