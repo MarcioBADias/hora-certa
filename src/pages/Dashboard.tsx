@@ -20,7 +20,25 @@ const Dashboard = () => {
 
   const { entries } = useTimeEntries(startDate, endDate);
   const { settings } = useSettings();
-  const { entries: bankEntries, balance } = useHourBank();
+  const { entries: bankEntries } = useHourBank();
+  const { credits: autoCredits } = useBankCredits();
+
+  // Calculate real bank balance: auto credits (non-expired) - manual debits
+  const balance = useMemo(() => {
+    const now = new Date();
+    const autoCreditBalance = autoCredits.reduce((sum, c) => {
+      if (new Date(c.expiresAt) < now) return sum;
+      return sum + c.bankHours;
+    }, 0);
+    const totalDebits = bankEntries
+      .filter(e => e.type === 'debit')
+      .reduce((sum, e) => sum + e.hours, 0);
+    return autoCreditBalance - totalDebits;
+  }, [autoCredits, bankEntries]);
+
+  const expiringCredits = useMemo(() => {
+    return autoCredits.filter(c => !isExpired(c.expiresAt) && isExpiringSoon(c.expiresAt, 30));
+  }, [autoCredits]);
 
   const navigateMonth = (dir: number) => {
     let m = month + dir;
