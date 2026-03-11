@@ -26,6 +26,13 @@ const Settings = () => {
   const [breakThreshold, setBreakThreshold] = useState(7);
   const [breakDuration, setBreakDuration] = useState(1);
   const [hourlyRate, setHourlyRate] = useState<string>('');
+  const [monthlySalary, setMonthlySalary] = useState<string>('');
+
+  // Calcula valor/hora: salário / (horas semanais * 52 / 12)
+  const monthlyDivisor = weeklyHours * (52 / 12);
+  const calculatedHourlyRate = monthlySalary && monthlyDivisor > 0
+    ? (parseFloat(monthlySalary) / monthlyDivisor)
+    : null;
 
   useEffect(() => {
     if (settings) {
@@ -39,6 +46,7 @@ const Settings = () => {
       setBreakThreshold(settings.break_threshold_hours);
       setBreakDuration(settings.break_duration_hours);
       setHourlyRate(settings.hourly_rate?.toString() || '');
+      setMonthlySalary((settings as any).monthly_salary?.toString() || '');
     }
   }, [settings]);
 
