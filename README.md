@@ -1,73 +1,58 @@
-# Welcome to your Lovable project
+# Hora Certa ⏱️
 
-## Project info
+Uma aplicação completa para gestão de jornada de trabalho, projetada para simplificar o controle de horas extras, escalas, horários de serviço, banco de horas e marcação de pontos. Construída com foco em performance, experiência do usuário e arquitetura escalável.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+Você pode conferir a aplicação em produção aqui: [Hora Certa](https://hora-certa.netlify.app)
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## 🚀 Funcionalidades Principais
 
-**Use Lovable**
+* **Marcação de Ponto:** Registro ágil e preciso de entradas e saídas.
+* **Gestão de Banco de Horas:** Acompanhamento detalhado de saldo positivo e negativo de horas.
+* **Controle de Horas Extras:** Cálculo automatizado de horas trabalhadas além da jornada regular.
+* **Escalas e Horários de Serviço:** Planejamento e visualização clara das escalas da equipe.
+* **Dashboard Analítico:** Visão geral com gráficos e indicadores de desempenho utilizando Recharts.
+* **Autenticação Segura:** Sistema de login e gestão de usuários integrado ao Supabase.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+---
 
-Changes made via Lovable will be committed automatically to this repo.
+## 🛠️ Tecnologias e Bibliotecas
 
-**Use your preferred IDE**
+Este projeto foi desenvolvido utilizando as tecnologias mais modernas do ecossistema front-end:
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+* **Core:** React 18, Vite e TypeScript.
+* **UI e Estilização:** Tailwind CSS, Shadcn UI (Radix UI) para componentes acessíveis e Framer Motion para animações fluidas.
+* **Gerenciamento de Estado e Mutação:** React Query (TanStack Query) para comunicação com o backend e cache.
+* **Formulários e Validação:** React Hook Form integrado com Zod.
+* **Backend as a Service (BaaS):** Supabase (Banco de dados, Autenticação e Edge Functions).
+* **Roteamento:** React Router DOM.
+* **Testes:** * Testes Unitários: Vitest
+  * Testes E2E (End-to-End): Playwright
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+---
 
-Follow these steps:
+## 🏗️ Arquitetura e Padrões de Código
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+Para manter a consistência, legibilidade e facilitar a manutenção e escalabilidade da aplicação, adotamos rigorosamente os seguintes padrões arquiteturais:
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+1. **Exportações:** Utilizamos **apenas exportações nomeadas** (`export const Component = ...`). O uso de exportações padrão (`export default`) é expressamente proibido para evitar inconsistências de nomenclatura durante as importações e facilitar a refatoração.
 
-# Step 3: Install the necessary dependencies.
-npm i
+2. **Gerenciamento de Estado Complexo:** Priorizamos o hook `useReducer` em vez de múltiplos `useState` para gerenciar estados que possuem lógicas de transição complexas.
+   * **Regra de Separação:** O `Reducer` e o `initialState` devem **sempre** ser declarados e mantidos em um arquivo ou módulo externo ao componente visual (ex: em um arquivo dedicado na pasta de *hooks* ou *reducers*). Isso isola a regra de negócios e facilita a criação de testes unitários.
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+---
 
-**Edit a file directly in GitHub**
+## ⚙️ Como Executar o Projeto Localmente
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Pré-requisitos
+* Node.js (versão 18 ou superior recomendada)
+* Gerenciador de pacotes (npm, yarn, pnpm ou bun)
+* Uma conta no [Supabase](https://supabase.com/) (para configurar o ambiente de desenvolvimento)
 
-**Use GitHub Codespaces**
+### Passo a Passo
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+1. **Clone o repositório:**
+   ```bash
+   git clone [https://github.com/MarcioBADias/hora-certa.git](https://github.com/MarcioBADias/hora-certa.git)
+   cd hora-certa
