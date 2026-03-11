@@ -104,7 +104,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
         {/* Mobile bottom nav */}
         <nav className="flex border-t border-border bg-card md:hidden">
-          {navItems.slice(0, 4).map(item => {
+          {navItems.slice(0, 5).map(item => {
             const active = location.pathname === item.path;
             return (
               <Link key={item.path} to={item.path} className="flex flex-1 flex-col items-center gap-0.5 py-2">
