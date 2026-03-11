@@ -64,6 +64,10 @@ const Settings = () => {
 
   const handleSave = async () => {
     try {
+      const computedRate = calculatedHourlyRate !== null
+        ? Math.round(calculatedHourlyRate * 100) / 100
+        : (hourlyRate ? parseFloat(hourlyRate) : null);
+
       await saveSettings.mutateAsync({
         weekly_hours: weeklyHours,
         work_days: workDays,
@@ -74,8 +78,9 @@ const Settings = () => {
         bank_expiration_days: bankExpirationDays,
         break_threshold_hours: breakThreshold,
         break_duration_hours: breakDuration,
-        hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
-      });
+        hourly_rate: computedRate,
+        monthly_salary: monthlySalary ? parseFloat(monthlySalary) : null,
+      } as any);
       toast.success('Configurações salvas!');
     } catch {
       toast.error('Erro ao salvar configurações');
