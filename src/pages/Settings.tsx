@@ -110,9 +110,23 @@ const Settings = () => {
                 <Label>Horas semanais</Label>
                 <Input type="number" value={weeklyHours} onChange={e => setWeeklyHours(Number(e.target.value))} min={1} max={60} />
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 items-end">
               <div>
-                <Label>Valor/hora (R$)</Label>
-                <Input type="number" placeholder="Opcional" value={hourlyRate} onChange={e => setHourlyRate(e.target.value)} min={0} step="0.01" />
+                <Label>Salário mensal (R$)</Label>
+                <Input type="number" placeholder="Ex: 3000" value={monthlySalary} onChange={e => setMonthlySalary(e.target.value)} min={0} step="0.01" />
+              </div>
+              <div className="rounded-lg border border-border bg-muted/50 p-3">
+                <p className="text-xs text-muted-foreground">Valor/hora calculado</p>
+                <p className="text-lg font-bold text-primary">
+                  {calculatedHourlyRate !== null
+                    ? `R$ ${calculatedHourlyRate.toFixed(2)}`
+                    : '—'}
+                </p>
+                {monthlyDivisor > 0 && (
+                  <p className="text-[10px] text-muted-foreground">Divisor: {monthlyDivisor.toFixed(1)}h/mês</p>
+                )}
               </div>
             </div>
 
