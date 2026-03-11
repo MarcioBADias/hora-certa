@@ -10,6 +10,7 @@ import Dashboard from "@/pages/Dashboard";
 import TimeEntry from "@/pages/TimeEntry";
 import HourBank from "@/pages/HourBank";
 import Settings from "@/pages/Settings";
+import Reports from "@/pages/Reports";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const AppRoutes = () => (
     <Route path="/ponto" element={<ProtectedRoute><TimeEntry /></ProtectedRoute>} />
     <Route path="/banco" element={<ProtectedRoute><HourBank /></ProtectedRoute>} />
     <Route path="/config" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+    <Route path="/relatorios" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );

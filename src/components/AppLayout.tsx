@@ -3,12 +3,13 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, CalendarDays, Hourglass, Settings, LogOut, Menu, X, Clock } from 'lucide-react';
+import { LayoutDashboard, CalendarDays, Hourglass, Settings, LogOut, Menu, X, Clock, FileText } from 'lucide-react';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/ponto', label: 'Registro', icon: CalendarDays },
   { path: '/banco', label: 'Banco de Horas', icon: Hourglass },
+  { path: '/relatorios', label: 'Relatórios', icon: FileText },
   { path: '/config', label: 'Configurações', icon: Settings },
 ];
 
@@ -103,7 +104,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
         {/* Mobile bottom nav */}
         <nav className="flex border-t border-border bg-card md:hidden">
-          {navItems.slice(0, 4).map(item => {
+          {navItems.slice(0, 5).map(item => {
             const active = location.pathname === item.path;
             return (
               <Link key={item.path} to={item.path} className="flex flex-1 flex-col items-center gap-0.5 py-2">
