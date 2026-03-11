@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      clock_punches: {
+        Row: {
+          address: string | null
+          created_at: string
+          date: string
+          id: string
+          latitude: number | null
+          longitude: number | null
+          punch_number: number
+          punch_time: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          date: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          punch_number: number
+          punch_time: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          punch_number?: number
+          punch_time?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       hour_bank: {
         Row: {
           created_at: string
