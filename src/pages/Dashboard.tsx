@@ -126,7 +126,7 @@ const Dashboard = () => {
             { icon: Hourglass, label: 'HE → Banco', value: formatHoursMinutes(summary.bankOvertimeHours), color: 'text-warning' },
             { icon: CalendarCheck, label: 'Saldo Banco', value: formatHoursMinutes(balance), color: balance >= 0 ? 'text-success' : 'text-destructive' },
             { icon: DollarSign, label: 'Valor HE', value: summary.estimatedOvertimePay !== null ? `R$ ${summary.estimatedOvertimePay.toFixed(2)}` : '—', color: 'text-primary' },
-            { icon: AlertTriangle, label: 'Expirando', value: `${expiringEntries.length} registros`, color: expiringEntries.length > 0 ? 'text-destructive' : 'text-muted-foreground' },
+            { icon: AlertTriangle, label: 'Expirando', value: `${expiringCredits.length} registros`, color: expiringCredits.length > 0 ? 'text-destructive' : 'text-muted-foreground' },
           ].map((card, i) => (
             <motion.div key={card.label} custom={i} initial="hidden" animate="visible" variants={cardVariants}>
               <Card className="overflow-hidden">
