@@ -85,11 +85,7 @@ const Dashboard = () => {
     });
   }, [entries, settings]);
 
-  const expiringEntries = useMemo(() => {
-    return bankEntries
-      .filter(e => e.type === 'credit' && e.expires_at && !isExpired(e.expires_at) && isExpiringSoon(e.expires_at, 30))
-      .sort((a, b) => new Date(a.expires_at!).getTime() - new Date(b.expires_at!).getTime());
-  }, [bankEntries]);
+  // expiringCredits already computed above from autoCredits
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
