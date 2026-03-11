@@ -176,7 +176,7 @@ const Dashboard = () => {
       )}
 
       {/* Expiring alerts */}
-      {expiringEntries.length > 0 && (
+      {expiringCredits.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
           <Card className="border-warning/30 bg-warning/5">
             <CardHeader>
@@ -187,13 +187,13 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {expiringEntries.map(entry => {
-                  const days = daysUntilExpiration(entry.expires_at!);
+                {expiringCredits.map(credit => {
+                  const days = daysUntilExpiration(credit.expiresAt);
                   return (
-                    <div key={entry.id} className="flex items-center justify-between rounded-lg bg-card p-2 text-sm">
+                    <div key={credit.month} className="flex items-center justify-between rounded-lg bg-card p-2 text-sm">
                       <div>
-                        <span className="font-medium">{formatHoursMinutes(entry.hours)}</span>
-                        <span className="ml-2 text-muted-foreground">de {new Date(entry.date + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                        <span className="font-medium">{formatHoursMinutes(credit.bankHours)}</span>
+                        <span className="ml-2 text-muted-foreground">de {credit.monthLabel}</span>
                       </div>
                       <span className={`text-xs font-semibold ${days <= 7 ? 'text-destructive' : days <= 15 ? 'text-warning' : 'text-muted-foreground'}`}>
                         {days} dias restantes
