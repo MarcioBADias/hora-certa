@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useTimeEntries } from '@/hooks/useTimeEntries';
 import { useSettings } from '@/hooks/useSettings';
 import { useHourBank } from '@/hooks/useHourBank';
+import { useBankCredits } from '@/hooks/useBankCredits';
 import { calculateDay, calculateMonthSummary, formatHoursMinutes, MONTH_NAMES, getDaysInMonth, daysUntilExpiration, isExpiringSoon, isExpired } from '@/lib/calculations';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,25 @@ const Dashboard = () => {
 
   const { entries } = useTimeEntries(startDate, endDate);
   const { settings } = useSettings();
-  const { entries: bankEntries, balance } = useHourBank();
+  const { entries: bankEntries } = useHourBank();
+  const { credits: autoCredits } = useBankCredits();
+
+  // Calculate real bank balance: auto credits (non-expired) - manual debits
+  const balance = useMemo(() => {
+    const now = new Date();
+    const autoCreditBalance = autoCredits.reduce((sum, c) => {
+      if (new Date(c.expiresAt) < now) return sum;
+      return sum + c.bankHours;
+    }, 0);
+    const totalDebits = bankEntries
+      .filter(e => e.type === 'debit')
+      .reduce((sum, e) => sum + e.hours, 0);
+    return autoCreditBalance - totalDebits;
+  }, [autoCredits, bankEntries]);
+
+  const expiringCredits = useMemo(() => {
+    return autoCredits.filter(c => !isExpired(c.expiresAt) && isExpiringSoon(c.expiresAt, 30));
+  }, [autoCredits]);
 
   const navigateMonth = (dir: number) => {
     let m = month + dir;
@@ -66,11 +85,7 @@ const Dashboard = () => {
     });
   }, [entries, settings]);
 
-  const expiringEntries = useMemo(() => {
-    return bankEntries
-      .filter(e => e.type === 'credit' && e.expires_at && !isExpired(e.expires_at) && isExpiringSoon(e.expires_at, 30))
-      .sort((a, b) => new Date(a.expires_at!).getTime() - new Date(b.expires_at!).getTime());
-  }, [bankEntries]);
+  // expiringCredits already computed above from autoCredits
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -111,7 +126,7 @@ const Dashboard = () => {
             { icon: Hourglass, label: 'HE → Banco', value: formatHoursMinutes(summary.bankOvertimeHours), color: 'text-warning' },
             { icon: CalendarCheck, label: 'Saldo Banco', value: formatHoursMinutes(balance), color: balance >= 0 ? 'text-success' : 'text-destructive' },
             { icon: DollarSign, label: 'Valor HE', value: summary.estimatedOvertimePay !== null ? `R$ ${summary.estimatedOvertimePay.toFixed(2)}` : '—', color: 'text-primary' },
-            { icon: AlertTriangle, label: 'Expirando', value: `${expiringEntries.length} registros`, color: expiringEntries.length > 0 ? 'text-destructive' : 'text-muted-foreground' },
+            { icon: AlertTriangle, label: 'Expirando', value: `${expiringCredits.length} registros`, color: expiringCredits.length > 0 ? 'text-destructive' : 'text-muted-foreground' },
           ].map((card, i) => (
             <motion.div key={card.label} custom={i} initial="hidden" animate="visible" variants={cardVariants}>
               <Card className="overflow-hidden">
@@ -161,7 +176,7 @@ const Dashboard = () => {
       )}
 
       {/* Expiring alerts */}
-      {expiringEntries.length > 0 && (
+      {expiringCredits.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
           <Card className="border-warning/30 bg-warning/5">
             <CardHeader>
@@ -172,13 +187,13 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {expiringEntries.map(entry => {
-                  const days = daysUntilExpiration(entry.expires_at!);
+                {expiringCredits.map(credit => {
+                  const days = daysUntilExpiration(credit.expiresAt);
                   return (
-                    <div key={entry.id} className="flex items-center justify-between rounded-lg bg-card p-2 text-sm">
+                    <div key={credit.month} className="flex items-center justify-between rounded-lg bg-card p-2 text-sm">
                       <div>
-                        <span className="font-medium">{formatHoursMinutes(entry.hours)}</span>
-                        <span className="ml-2 text-muted-foreground">de {new Date(entry.date + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                        <span className="font-medium">{formatHoursMinutes(credit.bankHours)}</span>
+                        <span className="ml-2 text-muted-foreground">de {credit.monthLabel}</span>
                       </div>
                       <span className={`text-xs font-semibold ${days <= 7 ? 'text-destructive' : days <= 15 ? 'text-warning' : 'text-muted-foreground'}`}>
                         {days} dias restantes
