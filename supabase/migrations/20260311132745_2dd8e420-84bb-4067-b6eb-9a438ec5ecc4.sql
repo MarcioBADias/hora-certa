@@ -1,0 +1,1 @@
+ALTER TABLE public.user_settings ADD COLUMN monthly_salary numeric DEFAULT NULL;
