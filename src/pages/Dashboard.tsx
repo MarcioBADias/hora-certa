@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useTimeEntries } from '@/hooks/useTimeEntries';
 import { useSettings } from '@/hooks/useSettings';
 import { useHourBank } from '@/hooks/useHourBank';
+import { useBankCredits } from '@/hooks/useBankCredits';
 import { calculateDay, calculateMonthSummary, formatHoursMinutes, MONTH_NAMES, getDaysInMonth, daysUntilExpiration, isExpiringSoon, isExpired } from '@/lib/calculations';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
