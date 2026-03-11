@@ -36,6 +36,7 @@ const AppRoutes = () => (
     <Route path="/ponto" element={<ProtectedRoute><TimeEntry /></ProtectedRoute>} />
     <Route path="/banco" element={<ProtectedRoute><HourBank /></ProtectedRoute>} />
     <Route path="/config" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+    <Route path="/relatorios" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );

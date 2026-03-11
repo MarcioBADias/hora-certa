@@ -9,6 +9,7 @@ const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/ponto', label: 'Registro', icon: CalendarDays },
   { path: '/banco', label: 'Banco de Horas', icon: Hourglass },
+  { path: '/relatorios', label: 'Relatórios', icon: FileText },
   { path: '/config', label: 'Configurações', icon: Settings },
 ];
 
