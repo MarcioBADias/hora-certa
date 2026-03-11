@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, CalendarDays, Hourglass, Settings, LogOut, Menu, X, Clock } from 'lucide-react';
+import { LayoutDashboard, CalendarDays, Hourglass, Settings, LogOut, Menu, X, Clock, FileText } from 'lucide-react';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
