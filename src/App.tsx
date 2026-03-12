@@ -12,6 +12,7 @@ import HourBank from "@/pages/HourBank";
 import Settings from "@/pages/Settings";
 import Reports from "@/pages/Reports";
 import NotFound from "@/pages/NotFound";
+import LandingPage from "@/pages/LandingPage";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const AuthRoute = ({ children }: { children: React.ReactNode }) => {
 
 const AppRoutes = () => (
   <Routes>
+    <Route path="/landing" element={<LandingPage />} />
     <Route path="/login" element={<AuthRoute><Auth /></AuthRoute>} />
     <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
     <Route path="/ponto" element={<ProtectedRoute><TimeEntry /></ProtectedRoute>} />
