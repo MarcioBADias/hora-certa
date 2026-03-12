@@ -3,14 +3,15 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, CalendarDays, Hourglass, Settings, LogOut, Menu, X, Clock, FileText } from 'lucide-react';
+import { LayoutDashboard, CalendarDays, Hourglass, Settings, LogOut, Menu, X, Clock, FileText, Info } from 'lucide-react';
 
 const navItems = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/ponto', label: 'Registro', icon: CalendarDays },
   { path: '/banco', label: 'Banco de Horas', icon: Hourglass },
   { path: '/relatorios', label: 'Relatórios', icon: FileText },
   { path: '/config', label: 'Configurações', icon: Settings },
+  { path: '/landing', label: 'Sobre', icon: Info },
 ];
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {

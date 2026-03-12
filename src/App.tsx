@@ -26,15 +26,23 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const AuthRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
   if (loading) return null;
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
+};
+
+const RootRoute = () => {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="flex min-h-screen items-center justify-center"><p className="text-muted-foreground">Carregando...</p></div>;
+  if (user) return <Navigate to="/dashboard" replace />;
+  return <LandingPage />;
 };
 
 const AppRoutes = () => (
   <Routes>
     <Route path="/landing" element={<LandingPage />} />
     <Route path="/login" element={<AuthRoute><Auth /></AuthRoute>} />
-    <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+    <Route path="/" element={<RootRoute />} />
+    <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
     <Route path="/ponto" element={<ProtectedRoute><TimeEntry /></ProtectedRoute>} />
     <Route path="/banco" element={<ProtectedRoute><HourBank /></ProtectedRoute>} />
     <Route path="/config" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
