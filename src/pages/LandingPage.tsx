@@ -14,12 +14,14 @@ import screenshotBanco from "@/assets/screenshot-banco.jpeg";
 import screenshotConfig from "@/assets/screenshot-config.jpeg";
 import screenshotRelatorios from "@/assets/screenshot-relatorios.jpeg";
 
+const easeOut: Easing = [0.16, 1, 0.3, 1];
+
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.15, duration: 0.6, ease: "easeOut" },
+    transition: { delay: i * 0.15, duration: 0.6, ease: easeOut },
   }),
 };
 
