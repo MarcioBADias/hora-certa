@@ -34,7 +34,7 @@ const AppRoutes = () => (
   <Routes>
     <Route path="/landing" element={<LandingPage />} />
     <Route path="/login" element={<AuthRoute><Auth /></AuthRoute>} />
-    <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+    <Route path="/" element={<RootRoute />} />
     <Route path="/ponto" element={<ProtectedRoute><TimeEntry /></ProtectedRoute>} />
     <Route path="/banco" element={<ProtectedRoute><HourBank /></ProtectedRoute>} />
     <Route path="/config" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
