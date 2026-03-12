@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, type Easing } from "framer-motion";
 import { Clock, CheckCircle, BarChart3, Shield, MapPin, FileText, Phone, Mail, MessageCircle, LogIn, ChevronRight, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
