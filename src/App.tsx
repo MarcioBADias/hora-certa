@@ -12,6 +12,7 @@ import HourBank from "@/pages/HourBank";
 import Settings from "@/pages/Settings";
 import Reports from "@/pages/Reports";
 import NotFound from "@/pages/NotFound";
+import LandingPage from "@/pages/LandingPage";
 
 const queryClient = new QueryClient();
 
