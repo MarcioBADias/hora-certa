@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
 import { useTimeEntries } from '@/hooks/useTimeEntries';
+import { useClockPunches } from '@/hooks/useClockPunches';
 import { useSettings } from '@/hooks/useSettings';
 import { calculateDay, calculateMonthSummary, getDaysInMonth, addDays } from '@/lib/calculations';
+import { punchesToEntries } from '@/lib/punchesToEntries';
 
 export interface BankCredit {
   month: string; // "2026-02"
@@ -13,32 +15,49 @@ export interface BankCredit {
 const MONTH_LABELS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
 export function useBankCredits() {
-  // Fetch all entries (no date filter)
   const { entries } = useTimeEntries();
+  const { punches } = useClockPunches();
   const { settings } = useSettings();
 
   const credits = useMemo((): BankCredit[] => {
-    if (!settings || entries.length === 0) return [];
+    if (!settings || (entries.length === 0 && punches.length === 0)) return [];
 
-    // Group entries by month
-    const byMonth: Record<string, typeof entries> = {};
+    // Build unified entries (manual + converted punches) grouped by date
+    const unifiedByDate: Record<string, { entry_time: string; exit_time: string }[]> = {};
+
+    // Add manual entries
     for (const e of entries) {
-      const monthKey = e.date.substring(0, 7); // "2026-02"
-      if (!byMonth[monthKey]) byMonth[monthKey] = [];
-      byMonth[monthKey].push(e);
+      if (!unifiedByDate[e.date]) unifiedByDate[e.date] = [];
+      unifiedByDate[e.date].push({ entry_time: e.entry_time, exit_time: e.exit_time });
+    }
+
+    // Add converted clock punches
+    const punchesByDate: Record<string, typeof punches> = {};
+    for (const p of punches) {
+      if (!punchesByDate[p.date]) punchesByDate[p.date] = [];
+      punchesByDate[p.date].push(p);
+    }
+    for (const [date, dayPunches] of Object.entries(punchesByDate)) {
+      const converted = punchesToEntries(dayPunches);
+      if (converted.length > 0) {
+        if (!unifiedByDate[date]) unifiedByDate[date] = [];
+        unifiedByDate[date].push(...converted);
+      }
+    }
+
+    // Group by month
+    const byMonth: Record<string, Record<string, { entry_time: string; exit_time: string }[]>> = {};
+    for (const [date, dateEntries] of Object.entries(unifiedByDate)) {
+      const monthKey = date.substring(0, 7);
+      if (!byMonth[monthKey]) byMonth[monthKey] = {};
+      byMonth[monthKey][date] = dateEntries;
     }
 
     const result: BankCredit[] = [];
 
-    for (const [monthKey, monthEntries] of Object.entries(byMonth)) {
+    for (const [monthKey, entriesByDate] of Object.entries(byMonth)) {
       const [y, m] = monthKey.split('-').map(Number);
       const days = getDaysInMonth(y, m - 1);
-
-      const entriesByDate: Record<string, typeof entries> = {};
-      for (const e of monthEntries) {
-        if (!entriesByDate[e.date]) entriesByDate[e.date] = [];
-        entriesByDate[e.date].push(e);
-      }
 
       const dayCalcs = days
         .map(d => {
@@ -52,7 +71,6 @@ export function useBankCredits() {
       const summary = calculateMonthSummary(dayCalcs, settings);
 
       if (summary.bankOvertimeHours > 0) {
-        // Last day of month + expiration days
         const lastDay = new Date(y, m, 0);
         const expiresAt = addDays(lastDay, settings.bank_expiration_days);
 
@@ -66,7 +84,7 @@ export function useBankCredits() {
     }
 
     return result.sort((a, b) => a.month.localeCompare(b.month));
-  }, [entries, settings]);
+  }, [entries, punches, settings]);
 
   return { credits };
 }

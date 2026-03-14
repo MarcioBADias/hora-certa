@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useTimeEntries } from '@/hooks/useTimeEntries';
+import { useClockPunches } from '@/hooks/useClockPunches';
 import { useSettings } from '@/hooks/useSettings';
 import { useHourBank } from '@/hooks/useHourBank';
 import { useBankCredits } from '@/hooks/useBankCredits';
+import { punchesToEntries } from '@/lib/punchesToEntries';
 import { calculateDay, calculateMonthSummary, formatHoursMinutes, MONTH_NAMES, getDaysInMonth, daysUntilExpiration, isExpiringSoon, isExpired } from '@/lib/calculations';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,6 +21,7 @@ const Dashboard = () => {
   const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`;
 
   const { entries } = useTimeEntries(startDate, endDate);
+  const { punches } = useClockPunches(startDate, endDate);
   const { settings } = useSettings();
   const { entries: bankEntries } = useHourBank();
   const { credits: autoCredits } = useBankCredits();
@@ -49,41 +52,53 @@ const Dashboard = () => {
     setYear(y);
   };
 
+  // Build unified entries (manual + punches)
+  const unifiedByDate = useMemo(() => {
+    const map: Record<string, { entry_time: string; exit_time: string }[]> = {};
+    for (const e of entries) {
+      if (!map[e.date]) map[e.date] = [];
+      map[e.date].push({ entry_time: e.entry_time, exit_time: e.exit_time });
+    }
+    const punchesByDate: Record<string, typeof punches> = {};
+    for (const p of punches) {
+      if (!punchesByDate[p.date]) punchesByDate[p.date] = [];
+      punchesByDate[p.date].push(p);
+    }
+    for (const [date, dayPunches] of Object.entries(punchesByDate)) {
+      const converted = punchesToEntries(dayPunches);
+      if (converted.length > 0) {
+        if (!map[date]) map[date] = [];
+        map[date].push(...converted);
+      }
+    }
+    return map;
+  }, [entries, punches]);
+
   const summary = useMemo(() => {
     if (!settings) return null;
     const days = getDaysInMonth(year, month);
-    const entriesByDate: Record<string, typeof entries> = {};
-    for (const e of entries) {
-      if (!entriesByDate[e.date]) entriesByDate[e.date] = [];
-      entriesByDate[e.date].push(e);
-    }
     const dayCalcs = days
       .map(d => {
         const dateStr = d.toISOString().split('T')[0];
-        const dayEntries = entriesByDate[dateStr] || [];
+        const dayEntries = unifiedByDate[dateStr] || [];
         if (dayEntries.length === 0) return null;
         return calculateDay(dateStr, dayEntries, settings);
       })
       .filter(Boolean) as any[];
     return calculateMonthSummary(dayCalcs, settings);
-  }, [entries, settings, year, month]);
+  }, [unifiedByDate, settings, year, month]);
 
   const chartData = useMemo(() => {
     if (!settings) return [];
-    const entriesByDate: Record<string, typeof entries> = {};
-    for (const e of entries) {
-      if (!entriesByDate[e.date]) entriesByDate[e.date] = [];
-      entriesByDate[e.date].push(e);
-    }
-    return Object.keys(entriesByDate).sort().map(date => {
-      const calc = calculateDay(date, entriesByDate[date], settings);
+    return Object.keys(unifiedByDate).sort().map(date => {
+      const calc = calculateDay(date, unifiedByDate[date], settings);
       return {
         date: new Date(date + 'T12:00:00').getDate().toString(),
         regular: Math.round(calc.regularHours * 100) / 100,
         overtime: Math.round(calc.overtimeHours * 100) / 100,
       };
     });
-  }, [entries, settings]);
+  }, [unifiedByDate, settings]);
 
   // expiringCredits already computed above from autoCredits
 
