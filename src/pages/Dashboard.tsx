@@ -90,20 +90,15 @@ const Dashboard = () => {
 
   const chartData = useMemo(() => {
     if (!settings) return [];
-    const entriesByDate: Record<string, typeof entries> = {};
-    for (const e of entries) {
-      if (!entriesByDate[e.date]) entriesByDate[e.date] = [];
-      entriesByDate[e.date].push(e);
-    }
-    return Object.keys(entriesByDate).sort().map(date => {
-      const calc = calculateDay(date, entriesByDate[date], settings);
+    return Object.keys(unifiedByDate).sort().map(date => {
+      const calc = calculateDay(date, unifiedByDate[date], settings);
       return {
         date: new Date(date + 'T12:00:00').getDate().toString(),
         regular: Math.round(calc.regularHours * 100) / 100,
         overtime: Math.round(calc.overtimeHours * 100) / 100,
       };
     });
-  }, [entries, settings]);
+  }, [unifiedByDate, settings]);
 
   // expiringCredits already computed above from autoCredits
 
