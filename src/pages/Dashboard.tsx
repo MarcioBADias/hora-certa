@@ -21,6 +21,7 @@ const Dashboard = () => {
   const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`;
 
   const { entries } = useTimeEntries(startDate, endDate);
+  const { punches } = useClockPunches(startDate, endDate);
   const { settings } = useSettings();
   const { entries: bankEntries } = useHourBank();
   const { credits: autoCredits } = useBankCredits();
