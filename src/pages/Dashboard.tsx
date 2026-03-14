@@ -52,24 +52,41 @@ const Dashboard = () => {
     setYear(y);
   };
 
+  // Build unified entries (manual + punches)
+  const unifiedByDate = useMemo(() => {
+    const map: Record<string, { entry_time: string; exit_time: string }[]> = {};
+    for (const e of entries) {
+      if (!map[e.date]) map[e.date] = [];
+      map[e.date].push({ entry_time: e.entry_time, exit_time: e.exit_time });
+    }
+    const punchesByDate: Record<string, typeof punches> = {};
+    for (const p of punches) {
+      if (!punchesByDate[p.date]) punchesByDate[p.date] = [];
+      punchesByDate[p.date].push(p);
+    }
+    for (const [date, dayPunches] of Object.entries(punchesByDate)) {
+      const converted = punchesToEntries(dayPunches);
+      if (converted.length > 0) {
+        if (!map[date]) map[date] = [];
+        map[date].push(...converted);
+      }
+    }
+    return map;
+  }, [entries, punches]);
+
   const summary = useMemo(() => {
     if (!settings) return null;
     const days = getDaysInMonth(year, month);
-    const entriesByDate: Record<string, typeof entries> = {};
-    for (const e of entries) {
-      if (!entriesByDate[e.date]) entriesByDate[e.date] = [];
-      entriesByDate[e.date].push(e);
-    }
     const dayCalcs = days
       .map(d => {
         const dateStr = d.toISOString().split('T')[0];
-        const dayEntries = entriesByDate[dateStr] || [];
+        const dayEntries = unifiedByDate[dateStr] || [];
         if (dayEntries.length === 0) return null;
         return calculateDay(dateStr, dayEntries, settings);
       })
       .filter(Boolean) as any[];
     return calculateMonthSummary(dayCalcs, settings);
-  }, [entries, settings, year, month]);
+  }, [unifiedByDate, settings, year, month]);
 
   const chartData = useMemo(() => {
     if (!settings) return [];
