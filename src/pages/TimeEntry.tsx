@@ -570,6 +570,55 @@ const TimeEntry = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Auto punch detail popup */}
+      <Dialog open={!!autoPunchDetailDate} onOpenChange={(open) => !open && setAutoPunchDetailDate(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Marcações Automáticas — {autoPunchDetailDate && new Date(autoPunchDetailDate + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+            </DialogTitle>
+          </DialogHeader>
+          {autoPunchDetailDate && (punchesByDate[autoPunchDetailDate] || []).length > 0 && (
+            <div className="space-y-3">
+              {(punchesByDate[autoPunchDetailDate] || []).sort((a, b) => a.punch_number - b.punch_number).map(punch => (
+                <div key={punch.id} className="rounded-lg bg-muted/50 p-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                      {punch.punch_number}
+                    </span>
+                    <span className="font-semibold">{PUNCH_LABELS[punch.punch_number - 1]}</span>
+                    <span className="text-muted-foreground">— {punch.punch_time}</span>
+                  </div>
+                  {punch.address && (
+                    <div className="mt-1 flex items-start gap-1 text-xs text-muted-foreground">
+                      <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
+                      <span>{punch.address}</span>
+                    </div>
+                  )}
+                  {punch.latitude && punch.longitude && (
+                    <div className="mt-1 text-[10px] text-muted-foreground">
+                      📍 {punch.latitude.toFixed(5)}, {punch.longitude.toFixed(5)}
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div className="rounded-lg bg-blue-500/10 p-2 text-xs">
+                <div className="flex justify-between">
+                  <span>Total trabalhado:</span>
+                  <span className="font-semibold text-blue-600">{formatHoursMinutes(getPunchWorkedInfo(punchesByDate[autoPunchDetailDate]).hours)}</span>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" className="w-full" onClick={() => {
+                setAutoPunchDetailDate(null);
+                if (autoPunchDetailDate) openAddDialog(autoPunchDetailDate);
+              }}>
+                Adicionar lançamento manual neste dia
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
