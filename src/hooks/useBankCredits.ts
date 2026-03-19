@@ -2,14 +2,25 @@ import { useMemo } from 'react';
 import { useTimeEntries } from '@/hooks/useTimeEntries';
 import { useClockPunches } from '@/hooks/useClockPunches';
 import { useSettings } from '@/hooks/useSettings';
-import { calculateDay, calculateMonthSummary, getDaysInMonth, addDays } from '@/lib/calculations';
+import { calculateDay, calculateMonthSummary, getDaysInMonth, addDays, DayCalculation } from '@/lib/calculations';
 import { punchesToEntries } from '@/lib/punchesToEntries';
+import { ClockPunch } from '@/hooks/useClockPunches';
+
+export interface DayDetail {
+  date: string;
+  overtimeHours: number;
+  netWorkedHours: number;
+  regularHours: number;
+  punches: ClockPunch[];
+  manualEntries: { entry_time: string; exit_time: string }[];
+}
 
 export interface BankCredit {
   month: string; // "2026-02"
   monthLabel: string;
   bankHours: number;
   expiresAt: string;
+  dailyDetails: DayDetail[];
 }
 
 const MONTH_LABELS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
@@ -22,17 +33,18 @@ export function useBankCredits() {
   const credits = useMemo((): BankCredit[] => {
     if (!settings || (entries.length === 0 && punches.length === 0)) return [];
 
-    // Build unified entries (manual + converted punches) grouped by date
+    // Build unified entries grouped by date
     const unifiedByDate: Record<string, { entry_time: string; exit_time: string }[]> = {};
+    const manualByDate: Record<string, { entry_time: string; exit_time: string }[]> = {};
+    const punchesByDate: Record<string, ClockPunch[]> = {};
 
-    // Add manual entries
     for (const e of entries) {
       if (!unifiedByDate[e.date]) unifiedByDate[e.date] = [];
+      if (!manualByDate[e.date]) manualByDate[e.date] = [];
       unifiedByDate[e.date].push({ entry_time: e.entry_time, exit_time: e.exit_time });
+      manualByDate[e.date].push({ entry_time: e.entry_time, exit_time: e.exit_time });
     }
 
-    // Add converted clock punches
-    const punchesByDate: Record<string, typeof punches> = {};
     for (const p of punches) {
       if (!punchesByDate[p.date]) punchesByDate[p.date] = [];
       punchesByDate[p.date].push(p);
@@ -59,14 +71,17 @@ export function useBankCredits() {
       const [y, m] = monthKey.split('-').map(Number);
       const days = getDaysInMonth(y, m - 1);
 
-      const dayCalcs = days
-        .map(d => {
-          const dateStr = d.toISOString().split('T')[0];
-          const dayEntries = entriesByDate[dateStr] || [];
-          if (dayEntries.length === 0) return null;
-          return calculateDay(dateStr, dayEntries, settings);
-        })
-        .filter(Boolean) as any[];
+      const dayCalcs: DayCalculation[] = [];
+      const dayDetailMap: Record<string, DayCalculation> = {};
+
+      for (const d of days) {
+        const dateStr = d.toISOString().split('T')[0];
+        const dayEntries = entriesByDate[dateStr] || [];
+        if (dayEntries.length === 0) continue;
+        const calc = calculateDay(dateStr, dayEntries, settings);
+        dayCalcs.push(calc);
+        dayDetailMap[dateStr] = calc;
+      }
 
       const summary = calculateMonthSummary(dayCalcs, settings);
 
@@ -74,11 +89,28 @@ export function useBankCredits() {
         const lastDay = new Date(y, m, 0);
         const expiresAt = addDays(lastDay, settings.bank_expiration_days);
 
+        // Build daily details for days with overtime
+        const dailyDetails: DayDetail[] = [];
+        for (const [dateStr, calc] of Object.entries(dayDetailMap)) {
+          if (calc.overtimeHours > 0) {
+            dailyDetails.push({
+              date: dateStr,
+              overtimeHours: calc.overtimeHours,
+              netWorkedHours: calc.netWorkedHours,
+              regularHours: calc.regularHours,
+              punches: punchesByDate[dateStr] || [],
+              manualEntries: manualByDate[dateStr] || [],
+            });
+          }
+        }
+        dailyDetails.sort((a, b) => a.date.localeCompare(b.date));
+
         result.push({
           month: monthKey,
           monthLabel: `${MONTH_LABELS[m - 1]} ${y}`,
           bankHours: summary.bankOvertimeHours,
           expiresAt: expiresAt.toISOString().split('T')[0],
+          dailyDetails,
         });
       }
     }
