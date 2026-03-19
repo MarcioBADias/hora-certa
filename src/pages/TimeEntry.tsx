@@ -1,8 +1,9 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { useTimeEntries } from '@/hooks/useTimeEntries';
 import { useClockPunches } from '@/hooks/useClockPunches';
 import { useSettings } from '@/hooks/useSettings';
 import { useHourBank } from '@/hooks/useHourBank';
+import { useAuth } from '@/contexts/AuthContext';
 import { calculateDay, formatHoursMinutes, DAY_NAMES, MONTH_NAMES, getDaysInMonth, getRegularHoursForDay } from '@/lib/calculations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Clock, Trash2, ChevronLeft, ChevronRight, CalendarDays, MapPin, Fingerprint, Loader2 } from 'lucide-react';
+import { Plus, Clock, Trash2, ChevronLeft, ChevronRight, CalendarDays, MapPin, Fingerprint, Loader2, Camera } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const PUNCH_LABELS = ['1ª Entrada', '1ª Saída', '2ª Entrada', '2ª Saída'];
 
