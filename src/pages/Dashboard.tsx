@@ -87,7 +87,13 @@ const Dashboard = () => {
 
   const summary = useMemo(() => {
     if (!settings) return null;
-    const days = getDaysInMonth(year, month);
+    // Generate days from payroll range instead of calendar month
+    const days: Date[] = [];
+    const cursor = new Date(payrollRange.start);
+    while (cursor <= payrollRange.end) {
+      days.push(new Date(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
     const dayCalcs = days
       .map(d => {
         const dateStr = d.toISOString().split('T')[0];
