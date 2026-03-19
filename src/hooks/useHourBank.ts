@@ -52,8 +52,9 @@ export function useHourBank() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['hour-bank'] }),
   });
 
-  // Calculate current balance (credits - debits, excluding expired)
+  // Calculate current balance (credits - debits, excluding expired and paid_override)
   const balance = (query.data || []).reduce((acc, entry) => {
+    if (entry.type === 'paid_override') return acc; // skip overrides
     const now = new Date();
     if (entry.type === 'credit' && entry.expires_at && new Date(entry.expires_at) < now) {
       return acc; // expired
