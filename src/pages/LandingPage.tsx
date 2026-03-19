@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, type Easing } from "framer-motion";
-import { Clock, CheckCircle, BarChart3, Shield, MapPin, FileText, Phone, Mail, MessageCircle, LogIn, ChevronRight, Send } from "lucide-react";
+import { Clock, CheckCircle, BarChart3, Shield, MapPin, FileText, Phone, Mail, MessageCircle, LogIn, ChevronRight, Send, Fingerprint, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,6 +54,18 @@ const features = [
     title: "Banco de Horas",
     description: "Controle automático de créditos e débitos. Acompanhe saldo, folgas e vencimentos facilmente.",
     image: screenshotBanco,
+  },
+  {
+    icon: Fingerprint,
+    title: "Biometria do Dispositivo",
+    description: "Valide marcações com a biometria nativa do seu celular — impressão digital ou Face ID — garantindo que só você registre seu ponto.",
+    image: screenshotConfig,
+  },
+  {
+    icon: Camera,
+    title: "Reconhecimento Facial",
+    description: "Capture uma foto de referência e valide cada marcação com reconhecimento facial via câmera. Segurança extra com registro visual.",
+    image: screenshotPonto,
   },
   {
     icon: MapPin,
@@ -247,7 +259,7 @@ const LandingPage = () => {
             {[
               { value: "4", label: "Marcações diárias" },
               { value: "GPS", label: "Localização verificada" },
-              { value: "PDF", label: "Exportação de relatórios" },
+              { value: "Bio", label: "Biometria & facial" },
               { value: "24/7", label: "Acesso ao sistema" },
             ].map((stat, i) => (
               <motion.div key={stat.label} variants={fadeUp} custom={i}>

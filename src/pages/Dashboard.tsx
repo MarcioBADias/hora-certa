@@ -5,7 +5,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { useHourBank } from '@/hooks/useHourBank';
 import { useBankCredits } from '@/hooks/useBankCredits';
 import { punchesToEntries } from '@/lib/punchesToEntries';
-import { calculateDay, calculateMonthSummary, formatHoursMinutes, MONTH_NAMES, getDaysInMonth, daysUntilExpiration, isExpiringSoon, isExpired } from '@/lib/calculations';
+import { calculateDay, calculateMonthSummary, formatHoursMinutes, MONTH_NAMES, getDaysInMonth, getPayrollMonthRange, daysUntilExpiration, isExpiringSoon, isExpired } from '@/lib/calculations';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
@@ -17,12 +17,19 @@ const Dashboard = () => {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
 
-  const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-  const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`;
+  const { settings } = useSettings();
+
+  // Use payroll month range based on closing_day setting
+  const payrollRange = useMemo(() => {
+    const closingDay = settings?.closing_day ?? null;
+    return getPayrollMonthRange(year, month, closingDay);
+  }, [year, month, settings?.closing_day]);
+
+  const startDate = payrollRange.start.toISOString().split('T')[0];
+  const endDate = payrollRange.end.toISOString().split('T')[0];
 
   const { entries } = useTimeEntries(startDate, endDate);
   const { punches } = useClockPunches(startDate, endDate);
-  const { settings } = useSettings();
   const { entries: bankEntries } = useHourBank();
   const { credits: autoCredits } = useBankCredits();
 
@@ -80,7 +87,13 @@ const Dashboard = () => {
 
   const summary = useMemo(() => {
     if (!settings) return null;
-    const days = getDaysInMonth(year, month);
+    // Generate days from payroll range instead of calendar month
+    const days: Date[] = [];
+    const cursor = new Date(payrollRange.start);
+    while (cursor <= payrollRange.end) {
+      days.push(new Date(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
     const dayCalcs = days
       .map(d => {
         const dateStr = d.toISOString().split('T')[0];
@@ -105,7 +118,7 @@ const Dashboard = () => {
     }
 
     return baseSummary;
-  }, [unifiedByDate, settings, year, month, currentMonthCredit]);
+  }, [unifiedByDate, settings, year, month, currentMonthCredit, payrollRange]);
 
   const chartData = useMemo(() => {
     if (!settings) return [];
