@@ -384,15 +384,26 @@ const TimeEntry = () => {
             {days.map((day) => {
               const dateStr = getDateStr(day);
               const dayEntries = entriesByDate[dateStr] || [];
+              const dayPunches = punchesByDate[dateStr] || [];
               const dayOfWeek = day.getDay();
               const isWork = settings ? getRegularHoursForDay(dayOfWeek, settings.work_days) > 0 : false;
               const isToday = dateStr === today;
               const hasEntries = dayEntries.length > 0;
+              const hasPunches = dayPunches.length > 0;
 
               let calc = null;
               if (hasEntries && settings) {
                 calc = calculateDay(dateStr, dayEntries, settings);
               }
+
+              const handleCalendarClick = () => {
+                if (hasPunches && !hasEntries) {
+                  // Auto-punch day without manual entries: show punch detail popup
+                  setAutoPunchDetailDate(dateStr);
+                } else {
+                  openAddDialog(dateStr);
+                }
+              };
 
               return (
                 <motion.div
@@ -401,11 +412,12 @@ const TimeEntry = () => {
                   whileTap={{ scale: 0.95 }}
                   className={`relative cursor-pointer rounded-lg border p-1.5 text-xs transition-colors
                     ${isToday ? 'border-primary bg-accent' : 'border-border/50'}
-                    ${isWork && !hasEntries ? 'bg-card' : ''}
                     ${hasEntries ? 'bg-success/10 border-success/30' : ''}
-                    ${!isWork && !hasEntries ? 'bg-muted/30' : ''}
+                    ${!hasEntries && hasPunches ? 'bg-blue-500/10 border-blue-500/30' : ''}
+                    ${isWork && !hasEntries && !hasPunches ? 'bg-card' : ''}
+                    ${!isWork && !hasEntries && !hasPunches ? 'bg-muted/30' : ''}
                   `}
-                  onClick={() => openAddDialog(dateStr)}
+                  onClick={handleCalendarClick}
                 >
                   <div className={`font-medium ${isToday ? 'text-primary' : 'text-foreground'}`}>
                     {day.getDate()}
@@ -415,8 +427,16 @@ const TimeEntry = () => {
                       {formatHoursMinutes(calc.netWorkedHours)}
                     </div>
                   )}
+                  {!hasEntries && hasPunches && (
+                    <div className="mt-0.5 text-[10px] text-blue-500 font-medium">
+                      {formatHoursMinutes(getPunchWorkedInfo(dayPunches).hours)}
+                    </div>
+                  )}
                   {hasEntries && (
                     <div className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-success" />
+                  )}
+                  {!hasEntries && hasPunches && (
+                    <div className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-blue-500" />
                   )}
                 </motion.div>
               );
