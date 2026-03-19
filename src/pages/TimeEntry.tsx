@@ -21,6 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 const PUNCH_LABELS = ['1ª Entrada', '1ª Saída', '2ª Entrada', '2ª Saída'];
 
 const TimeEntry = () => {
+  const { user } = useAuth();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
@@ -31,6 +32,10 @@ const TimeEntry = () => {
   const [entryType, setEntryType] = useState('work');
   const [isPunching, setIsPunching] = useState(false);
   const [autoPunchDetailDate, setAutoPunchDetailDate] = useState<string | null>(null);
+  const [faceCaptureOpen, setFaceCaptureOpen] = useState(false);
+  const faceCaptureResolveRef = useRef<((value: Blob | null) => void) | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
   const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`;
