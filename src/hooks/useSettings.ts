@@ -36,6 +36,7 @@ export function useSettings() {
       return {
         ...data,
         work_days: parseWorkDays(data.work_days),
+        closing_day: (data as any).closing_day ?? null,
       };
     },
     enabled: !!user,

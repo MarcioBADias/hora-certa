@@ -16,6 +16,27 @@ export interface UserSettings {
   break_threshold_hours: number;
   break_duration_hours: number;
   hourly_rate: number | null;
+  closing_day: number | null; // null = calendar month, e.g. 20 = month closes on 20th
+}
+
+/**
+ * Given a closing_day setting, returns the "payroll month" boundaries for a given reference month.
+ * If closing_day is null, returns normal calendar month.
+ * E.g. closing_day=20, month=March 2026 → start=2026-02-21, end=2026-03-20, label="Março 2026"
+ */
+export function getPayrollMonthRange(year: number, month: number, closingDay: number | null): { start: Date; end: Date } {
+  if (!closingDay) {
+    // Calendar month
+    const start = new Date(year, month, 1);
+    const end = new Date(year, month + 1, 0); // last day of month
+    return { start, end };
+  }
+  // Payroll month: starts on (closingDay+1) of previous month, ends on closingDay of this month
+  const prevMonth = month === 0 ? 11 : month - 1;
+  const prevYear = month === 0 ? year - 1 : year;
+  const start = new Date(prevYear, prevMonth, closingDay + 1);
+  const end = new Date(year, month, closingDay);
+  return { start, end };
 }
 
 export interface DayCalculation {
