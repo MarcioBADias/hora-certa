@@ -74,6 +74,10 @@ const Dashboard = () => {
     return map;
   }, [entries, punches]);
 
+  // Find the matching bank credit for the current month to use paid override
+  const currentMonthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const currentMonthCredit = autoCredits.find(c => c.month === currentMonthKey);
+
   const summary = useMemo(() => {
     if (!settings) return null;
     const days = getDaysInMonth(year, month);
@@ -85,8 +89,23 @@ const Dashboard = () => {
         return calculateDay(dateStr, dayEntries, settings);
       })
       .filter(Boolean) as any[];
-    return calculateMonthSummary(dayCalcs, settings);
-  }, [unifiedByDate, settings, year, month]);
+    const baseSummary = calculateMonthSummary(dayCalcs, settings);
+
+    // Apply paid override from bank credits if available
+    if (currentMonthCredit) {
+      const paidOverride = currentMonthCredit.paidOvertimeHours;
+      const bankOverride = Math.max(0, baseSummary.totalOvertimeHours - paidOverride);
+      const hourlyRate = settings.hourly_rate;
+      return {
+        ...baseSummary,
+        paidOvertimeHours: paidOverride,
+        bankOvertimeHours: bankOverride,
+        estimatedOvertimePay: hourlyRate ? Math.round(paidOverride * hourlyRate * 100) / 100 : null,
+      };
+    }
+
+    return baseSummary;
+  }, [unifiedByDate, settings, year, month, currentMonthCredit]);
 
   const chartData = useMemo(() => {
     if (!settings) return [];
