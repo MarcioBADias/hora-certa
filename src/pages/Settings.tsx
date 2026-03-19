@@ -210,6 +210,22 @@ const Settings = () => {
                 <Input type="number" value={breakDuration} onChange={e => setBreakDuration(Number(e.target.value))} min={0} max={3} step={0.5} />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Dia de fechamento do ponto</Label>
+                <Input
+                  type="number"
+                  placeholder="Vazio = mês normal"
+                  value={closingDay}
+                  onChange={e => setClosingDay(e.target.value)}
+                  min={1}
+                  max={28}
+                />
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  {closingDay ? `O mês fecha no dia ${closingDay}. Ex: Março = dia ${parseInt(closingDay) + 1} de Fev a ${closingDay} de Mar.` : 'Deixe vazio para usar o mês normal (1 a 30/31).'}
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </motion.div>
