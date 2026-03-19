@@ -27,6 +27,7 @@ const Settings = () => {
   const [breakDuration, setBreakDuration] = useState(1);
   const [hourlyRate, setHourlyRate] = useState<string>('');
   const [monthlySalary, setMonthlySalary] = useState<string>('');
+  const [closingDay, setClosingDay] = useState<string>('');
 
   // Calcula valor/hora: salário / (horas semanais * 52 / 12)
   const monthlyDivisor = weeklyHours * (52 / 12);
