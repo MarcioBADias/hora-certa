@@ -5,6 +5,8 @@ export interface WorkDay {
   hours: number;
 }
 
+export type PunchValidationMethod = 'none' | 'biometric' | 'face_capture';
+
 export interface UserSettings {
   weekly_hours: number;
   work_days: WorkDay[];
@@ -16,7 +18,8 @@ export interface UserSettings {
   break_threshold_hours: number;
   break_duration_hours: number;
   hourly_rate: number | null;
-  closing_day: number | null; // null = calendar month, e.g. 20 = month closes on 20th
+  closing_day: number | null;
+  punch_validation_method: PunchValidationMethod;
 }
 
 /**

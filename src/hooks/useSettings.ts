@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { parseWorkDays, UserSettings, WorkDay } from '@/lib/calculations';
+import { parseWorkDays, UserSettings, WorkDay, PunchValidationMethod } from '@/lib/calculations';
 import { Json } from '@/integrations/supabase/types';
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -16,6 +16,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   break_duration_hours: 1,
   hourly_rate: null,
   closing_day: null,
+  punch_validation_method: 'none',
 };
 
 export function useSettings() {
