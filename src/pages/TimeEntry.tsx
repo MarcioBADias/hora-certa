@@ -1,8 +1,9 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { useTimeEntries } from '@/hooks/useTimeEntries';
 import { useClockPunches } from '@/hooks/useClockPunches';
 import { useSettings } from '@/hooks/useSettings';
 import { useHourBank } from '@/hooks/useHourBank';
+import { useAuth } from '@/contexts/AuthContext';
 import { calculateDay, formatHoursMinutes, DAY_NAMES, MONTH_NAMES, getDaysInMonth, getRegularHoursForDay } from '@/lib/calculations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,11 +15,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Clock, Trash2, ChevronLeft, ChevronRight, CalendarDays, MapPin, Fingerprint, Loader2 } from 'lucide-react';
+import { Plus, Clock, Trash2, ChevronLeft, ChevronRight, CalendarDays, MapPin, Fingerprint, Loader2, Camera } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const PUNCH_LABELS = ['1ª Entrada', '1ª Saída', '2ª Entrada', '2ª Saída'];
 
 const TimeEntry = () => {
+  const { user } = useAuth();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
@@ -29,6 +32,10 @@ const TimeEntry = () => {
   const [entryType, setEntryType] = useState('work');
   const [isPunching, setIsPunching] = useState(false);
   const [autoPunchDetailDate, setAutoPunchDetailDate] = useState<string | null>(null);
+  const [faceCaptureOpen, setFaceCaptureOpen] = useState(false);
+  const faceCaptureResolveRef = useRef<((value: Blob | null) => void) | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
   const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`;
@@ -108,11 +115,120 @@ const TimeEntry = () => {
   const todayPunches = punchesByDate[today] || [];
   const nextPunchNumber = todayPunches.length + 1;
 
+  // Biometric validation via WebAuthn / Credential Management
+  const requestBiometric = async (): Promise<boolean> => {
+    try {
+      // Use Web Authentication API with platform authenticator (fingerprint, Face ID)
+      if (window.PublicKeyCredential) {
+        const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+        if (available) {
+          const challenge = new Uint8Array(32);
+          crypto.getRandomValues(challenge);
+          const credential = await navigator.credentials.create({
+            publicKey: {
+              challenge,
+              rp: { name: 'Controle de Ponto' },
+              user: {
+                id: new TextEncoder().encode(user?.id || 'user'),
+                name: user?.email || 'user',
+                displayName: 'Usuário',
+              },
+              pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
+              authenticatorSelection: {
+                authenticatorAttachment: 'platform',
+                userVerification: 'required',
+              },
+              timeout: 60000,
+            },
+          });
+          return !!credential;
+        }
+      }
+      // Fallback: browser doesn't support platform authenticator
+      toast.error('Biometria não disponível neste dispositivo. Configure outro método nas configurações.');
+      return false;
+    } catch (err: any) {
+      if (err?.name === 'NotAllowedError') {
+        toast.error('Validação biométrica cancelada');
+      } else {
+        toast.error('Erro na validação biométrica');
+      }
+      return false;
+    }
+  };
+
+  // Face capture: open camera and wait for capture
+  const requestFaceCapture = (): Promise<Blob | null> => {
+    return new Promise(async (resolve) => {
+      faceCaptureResolveRef.current = resolve;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: 640, height: 480 },
+        });
+        streamRef.current = stream;
+        setFaceCaptureOpen(true);
+        // Wait for videoRef to be mounted
+        setTimeout(() => {
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            videoRef.current.play();
+          }
+        }, 100);
+      } catch {
+        toast.error('Não foi possível acessar a câmera');
+        resolve(null);
+      }
+    });
+  };
+
+  const handleFaceCapture = () => {
+    if (!videoRef.current) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(videoRef.current, 0, 0);
+    // Stop stream
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+    setFaceCaptureOpen(false);
+    canvas.toBlob((blob) => {
+      faceCaptureResolveRef.current?.(blob);
+      faceCaptureResolveRef.current = null;
+    }, 'image/jpeg', 0.85);
+  };
+
+  const cancelFaceCapture = () => {
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+    setFaceCaptureOpen(false);
+    faceCaptureResolveRef.current?.(null);
+    faceCaptureResolveRef.current = null;
+  };
+
   const handleClockPunch = useCallback(async () => {
     if (nextPunchNumber > 4) {
       toast.error('Todas as 4 marcações do dia já foram feitas');
       return;
     }
+
+    const validationMethod = settings?.punch_validation_method || 'none';
+
+    // Validation step
+    let photoBlob: Blob | null = null;
+
+    if (validationMethod === 'biometric') {
+      const ok = await requestBiometric();
+      if (!ok) return;
+    } else if (validationMethod === 'face_capture') {
+      photoBlob = await requestFaceCapture();
+      if (!photoBlob) {
+        toast.error('Captura de imagem cancelada');
+        return;
+      }
+    }
+
     setIsPunching(true);
     try {
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -136,6 +252,21 @@ const TimeEntry = () => {
         // Address is optional
       }
 
+      // Upload face photo if captured
+      let photoUrl: string | undefined;
+      if (photoBlob && user) {
+        const fileName = `${user.id}/${today}_punch_${nextPunchNumber}.jpg`;
+        const { error: uploadError } = await supabase.storage
+          .from('punch-photos')
+          .upload(fileName, photoBlob, { contentType: 'image/jpeg', upsert: true });
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage
+            .from('punch-photos')
+            .getPublicUrl(fileName);
+          photoUrl = urlData.publicUrl;
+        }
+      }
+
       await addPunch.mutateAsync({
         date: today,
         punch_number: nextPunchNumber,
@@ -143,7 +274,8 @@ const TimeEntry = () => {
         latitude,
         longitude,
         address,
-      });
+        ...(photoUrl ? { photo_url: photoUrl } : {}),
+      } as any);
 
       toast.success(`${PUNCH_LABELS[nextPunchNumber - 1]} registrada às ${punchTime}`);
     } catch (err: any) {
@@ -159,7 +291,7 @@ const TimeEntry = () => {
     } finally {
       setIsPunching(false);
     }
-  }, [nextPunchNumber, today, addPunch]);
+  }, [nextPunchNumber, today, addPunch, settings, user]);
 
   const handleDeletePunch = async (id: string) => {
     try {
@@ -220,6 +352,16 @@ const TimeEntry = () => {
               <CardTitle className="text-base">Marcar Ponto — {new Date().toLocaleDateString('pt-BR')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Validation method indicator */}
+              {settings?.punch_validation_method && settings.punch_validation_method !== 'none' && (
+                <div className="flex items-center gap-2 rounded-lg bg-accent/50 p-2 text-xs text-muted-foreground">
+                  {settings.punch_validation_method === 'biometric' ? (
+                    <><Fingerprint className="h-3.5 w-3.5 text-primary" /><span>Validação por biometria ativa</span></>
+                  ) : (
+                    <><Camera className="h-3.5 w-3.5 text-primary" /><span>Validação por captura facial ativa</span></>
+                  )}
+                </div>
+              )}
               <div className="text-center">
                 <p className="mb-1 text-sm text-muted-foreground">
                   {nextPunchNumber <= 4
@@ -617,6 +759,33 @@ const TimeEntry = () => {
               </Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Face Capture Dialog */}
+      <Dialog open={faceCaptureOpen} onOpenChange={(open) => { if (!open) cancelFaceCapture(); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Camera className="h-5 w-5 text-primary" />
+              Captura Facial
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">Posicione seu rosto na câmera para registrar a marcação.</p>
+            <div className="relative mx-auto overflow-hidden rounded-xl border border-border" style={{ maxWidth: 300 }}>
+              <video ref={videoRef} className="w-full" autoPlay playsInline muted style={{ transform: 'scaleX(-1)' }} />
+            </div>
+            <div className="flex gap-2">
+              <Button className="flex-1 gap-2" onClick={handleFaceCapture}>
+                <Camera className="h-4 w-4" />
+                Capturar e Registrar
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={cancelFaceCapture}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

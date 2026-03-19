@@ -1,16 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSettings } from '@/hooks/useSettings';
-import { WorkDay, DAY_NAMES_FULL } from '@/lib/calculations';
+import { WorkDay, DAY_NAMES_FULL, PunchValidationMethod } from '@/lib/calculations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Save } from 'lucide-react';
+import { Settings as SettingsIcon, Save, Fingerprint, Camera, ShieldOff, ImageIcon } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Settings = () => {
+  const { user } = useAuth();
   const { settings, isLoading, saveSettings } = useSettings();
   const [weeklyHours, setWeeklyHours] = useState(20);
   const [workDays, setWorkDays] = useState<WorkDay[]>([
@@ -28,8 +32,12 @@ const Settings = () => {
   const [hourlyRate, setHourlyRate] = useState<string>('');
   const [monthlySalary, setMonthlySalary] = useState<string>('');
   const [closingDay, setClosingDay] = useState<string>('');
+  const [validationMethod, setValidationMethod] = useState<PunchValidationMethod>('none');
+  const [referencePhotoUrl, setReferencePhotoUrl] = useState<string | null>(null);
+  const [capturingRef, setCapturingRef] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
-  // Calcula valor/hora: salário / (horas semanais * 52 / 12)
   const monthlyDivisor = weeklyHours * (52 / 12);
   const calculatedHourlyRate = monthlySalary && monthlyDivisor > 0
     ? (parseFloat(monthlySalary) / monthlyDivisor)
@@ -49,8 +57,25 @@ const Settings = () => {
       setHourlyRate(settings.hourly_rate?.toString() || '');
       setMonthlySalary((settings as any).monthly_salary?.toString() || '');
       setClosingDay(settings.closing_day ? String(settings.closing_day) : '');
+      setValidationMethod(settings.punch_validation_method || 'none');
     }
   }, [settings]);
+
+  // Load reference photo
+  useEffect(() => {
+    if (user && validationMethod === 'face_capture') {
+      const { data } = supabase.storage
+        .from('punch-photos')
+        .getPublicUrl(`${user.id}/reference.jpg`);
+      // Check if file exists by trying to fetch it
+      fetch(data.publicUrl, { method: 'HEAD' })
+        .then(res => {
+          if (res.ok) setReferencePhotoUrl(data.publicUrl + '?t=' + Date.now());
+          else setReferencePhotoUrl(null);
+        })
+        .catch(() => setReferencePhotoUrl(null));
+    }
+  }, [user, validationMethod]);
 
   const toggleDay = (day: number, checked: boolean) => {
     if (checked) {
@@ -62,6 +87,63 @@ const Settings = () => {
 
   const setDayHours = (day: number, hours: number) => {
     setWorkDays(workDays.map(d => d.day === day ? { ...d, hours } : d));
+  };
+
+  const startFaceCapture = async () => {
+    setCapturingRef(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: 640, height: 480 },
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+    } catch {
+      toast.error('Não foi possível acessar a câmera');
+      setCapturingRef(false);
+    }
+  };
+
+  const captureReferencePhoto = async () => {
+    if (!videoRef.current || !user) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(videoRef.current, 0, 0);
+
+    // Stop stream
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      const { error } = await supabase.storage
+        .from('punch-photos')
+        .upload(`${user.id}/reference.jpg`, blob, {
+          contentType: 'image/jpeg',
+          upsert: true,
+        });
+      if (error) {
+        toast.error('Erro ao salvar foto de referência');
+      } else {
+        const { data } = supabase.storage
+          .from('punch-photos')
+          .getPublicUrl(`${user.id}/reference.jpg`);
+        setReferencePhotoUrl(data.publicUrl + '?t=' + Date.now());
+        toast.success('Foto de referência salva!');
+      }
+      setCapturingRef(false);
+    }, 'image/jpeg', 0.85);
+  };
+
+  const cancelCapture = () => {
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+    setCapturingRef(false);
   };
 
   const handleSave = async () => {
@@ -83,6 +165,7 @@ const Settings = () => {
         hourly_rate: computedRate,
         monthly_salary: monthlySalary ? parseFloat(monthlySalary) : null,
         closing_day: closingDay ? parseInt(closingDay) : null,
+        punch_validation_method: validationMethod,
       } as any);
       toast.success('Configurações salvas!');
     } catch {
@@ -227,6 +310,105 @@ const Settings = () => {
                 </p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Validation method */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Fingerprint className="h-5 w-5" />
+              Validação de Marcação Automática
+            </CardTitle>
+            <CardDescription>Escolha como validar a identidade ao marcar o ponto</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Método de validação</Label>
+              <Select value={validationMethod} onValueChange={(v) => setValidationMethod(v as PunchValidationMethod)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">
+                    <div className="flex items-center gap-2">
+                      <ShieldOff className="h-4 w-4 text-muted-foreground" />
+                      <span>Nenhum — apenas apertar o botão</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="biometric">
+                    <div className="flex items-center gap-2">
+                      <Fingerprint className="h-4 w-4 text-primary" />
+                      <span>Biometria do dispositivo</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="face_capture">
+                    <div className="flex items-center gap-2">
+                      <Camera className="h-4 w-4 text-primary" />
+                      <span>Captura de imagem facial</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {validationMethod === 'biometric' && (
+              <div className="rounded-lg bg-accent/50 p-3 text-sm text-muted-foreground">
+                <div className="flex items-start gap-2">
+                  <Fingerprint className="mt-0.5 h-4 w-4 text-primary" />
+                  <p>O dispositivo solicitará sua biometria (impressão digital, Face ID, PIN do dispositivo) antes de registrar cada marcação.</p>
+                </div>
+              </div>
+            )}
+
+            {validationMethod === 'face_capture' && (
+              <div className="space-y-3">
+                <div className="rounded-lg bg-accent/50 p-3 text-sm text-muted-foreground">
+                  <div className="flex items-start gap-2">
+                    <Camera className="mt-0.5 h-4 w-4 text-primary" />
+                    <p>Uma foto será capturada a cada marcação e salva como registro. Configure abaixo a foto de referência.</p>
+                  </div>
+                </div>
+
+                {/* Reference photo */}
+                <div>
+                  <Label className="mb-2 block">Foto de referência</Label>
+                  {referencePhotoUrl && !capturingRef ? (
+                    <div className="space-y-2">
+                      <div className="relative mx-auto w-48 overflow-hidden rounded-xl border border-border">
+                        <img src={referencePhotoUrl} alt="Referência facial" className="w-full" />
+                      </div>
+                      <Button variant="outline" size="sm" className="w-full gap-2" onClick={startFaceCapture}>
+                        <Camera className="h-4 w-4" />
+                        Atualizar foto de referência
+                      </Button>
+                    </div>
+                  ) : capturingRef ? (
+                    <div className="space-y-2">
+                      <div className="relative mx-auto overflow-hidden rounded-xl border border-border" style={{ maxWidth: 320 }}>
+                        <video ref={videoRef} className="w-full" autoPlay playsInline muted style={{ transform: 'scaleX(-1)' }} />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button className="flex-1 gap-2" onClick={captureReferencePhoto}>
+                          <ImageIcon className="h-4 w-4" />
+                          Capturar
+                        </Button>
+                        <Button variant="outline" className="flex-1" onClick={cancelCapture}>
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button variant="outline" className="w-full gap-2" onClick={startFaceCapture}>
+                      <Camera className="h-4 w-4" />
+                      Tirar foto de referência
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>
