@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   break_threshold_hours: 7,
   break_duration_hours: 1,
   hourly_rate: null,
+  closing_day: null,
 };
 
 export function useSettings() {
