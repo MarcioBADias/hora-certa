@@ -115,11 +115,120 @@ const TimeEntry = () => {
   const todayPunches = punchesByDate[today] || [];
   const nextPunchNumber = todayPunches.length + 1;
 
+  // Biometric validation via WebAuthn / Credential Management
+  const requestBiometric = async (): Promise<boolean> => {
+    try {
+      // Use Web Authentication API with platform authenticator (fingerprint, Face ID)
+      if (window.PublicKeyCredential) {
+        const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+        if (available) {
+          const challenge = new Uint8Array(32);
+          crypto.getRandomValues(challenge);
+          const credential = await navigator.credentials.create({
+            publicKey: {
+              challenge,
+              rp: { name: 'Controle de Ponto' },
+              user: {
+                id: new TextEncoder().encode(user?.id || 'user'),
+                name: user?.email || 'user',
+                displayName: 'Usuário',
+              },
+              pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
+              authenticatorSelection: {
+                authenticatorAttachment: 'platform',
+                userVerification: 'required',
+              },
+              timeout: 60000,
+            },
+          });
+          return !!credential;
+        }
+      }
+      // Fallback: browser doesn't support platform authenticator
+      toast.error('Biometria não disponível neste dispositivo. Configure outro método nas configurações.');
+      return false;
+    } catch (err: any) {
+      if (err?.name === 'NotAllowedError') {
+        toast.error('Validação biométrica cancelada');
+      } else {
+        toast.error('Erro na validação biométrica');
+      }
+      return false;
+    }
+  };
+
+  // Face capture: open camera and wait for capture
+  const requestFaceCapture = (): Promise<Blob | null> => {
+    return new Promise(async (resolve) => {
+      faceCaptureResolveRef.current = resolve;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: 640, height: 480 },
+        });
+        streamRef.current = stream;
+        setFaceCaptureOpen(true);
+        // Wait for videoRef to be mounted
+        setTimeout(() => {
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            videoRef.current.play();
+          }
+        }, 100);
+      } catch {
+        toast.error('Não foi possível acessar a câmera');
+        resolve(null);
+      }
+    });
+  };
+
+  const handleFaceCapture = () => {
+    if (!videoRef.current) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(videoRef.current, 0, 0);
+    // Stop stream
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+    setFaceCaptureOpen(false);
+    canvas.toBlob((blob) => {
+      faceCaptureResolveRef.current?.(blob);
+      faceCaptureResolveRef.current = null;
+    }, 'image/jpeg', 0.85);
+  };
+
+  const cancelFaceCapture = () => {
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+    setFaceCaptureOpen(false);
+    faceCaptureResolveRef.current?.(null);
+    faceCaptureResolveRef.current = null;
+  };
+
   const handleClockPunch = useCallback(async () => {
     if (nextPunchNumber > 4) {
       toast.error('Todas as 4 marcações do dia já foram feitas');
       return;
     }
+
+    const validationMethod = settings?.punch_validation_method || 'none';
+
+    // Validation step
+    let photoBlob: Blob | null = null;
+
+    if (validationMethod === 'biometric') {
+      const ok = await requestBiometric();
+      if (!ok) return;
+    } else if (validationMethod === 'face_capture') {
+      photoBlob = await requestFaceCapture();
+      if (!photoBlob) {
+        toast.error('Captura de imagem cancelada');
+        return;
+      }
+    }
+
     setIsPunching(true);
     try {
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -143,6 +252,21 @@ const TimeEntry = () => {
         // Address is optional
       }
 
+      // Upload face photo if captured
+      let photoUrl: string | undefined;
+      if (photoBlob && user) {
+        const fileName = `${user.id}/${today}_punch_${nextPunchNumber}.jpg`;
+        const { error: uploadError } = await supabase.storage
+          .from('punch-photos')
+          .upload(fileName, photoBlob, { contentType: 'image/jpeg', upsert: true });
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage
+            .from('punch-photos')
+            .getPublicUrl(fileName);
+          photoUrl = urlData.publicUrl;
+        }
+      }
+
       await addPunch.mutateAsync({
         date: today,
         punch_number: nextPunchNumber,
@@ -150,7 +274,8 @@ const TimeEntry = () => {
         latitude,
         longitude,
         address,
-      });
+        ...(photoUrl ? { photo_url: photoUrl } : {}),
+      } as any);
 
       toast.success(`${PUNCH_LABELS[nextPunchNumber - 1]} registrada às ${punchTime}`);
     } catch (err: any) {
@@ -166,7 +291,7 @@ const TimeEntry = () => {
     } finally {
       setIsPunching(false);
     }
-  }, [nextPunchNumber, today, addPunch]);
+  }, [nextPunchNumber, today, addPunch, settings, user]);
 
   const handleDeletePunch = async (id: string) => {
     try {
