@@ -259,7 +259,7 @@ const LandingPage = () => {
             {[
               { value: "4", label: "Marcações diárias" },
               { value: "GPS", label: "Localização verificada" },
-              { value: "PDF", label: "Exportação de relatórios" },
+              { value: "Bio", label: "Biometria & facial" },
               { value: "24/7", label: "Acesso ao sistema" },
             ].map((stat, i) => (
               <motion.div key={stat.label} variants={fadeUp} custom={i}>

@@ -118,7 +118,7 @@ const Dashboard = () => {
     }
 
     return baseSummary;
-  }, [unifiedByDate, settings, year, month, currentMonthCredit]);
+  }, [unifiedByDate, settings, year, month, currentMonthCredit, payrollRange]);
 
   const chartData = useMemo(() => {
     if (!settings) return [];
