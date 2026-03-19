@@ -761,6 +761,33 @@ const TimeEntry = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Face Capture Dialog */}
+      <Dialog open={faceCaptureOpen} onOpenChange={(open) => { if (!open) cancelFaceCapture(); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Camera className="h-5 w-5 text-primary" />
+              Captura Facial
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">Posicione seu rosto na câmera para registrar a marcação.</p>
+            <div className="relative mx-auto overflow-hidden rounded-xl border border-border" style={{ maxWidth: 300 }}>
+              <video ref={videoRef} className="w-full" autoPlay playsInline muted style={{ transform: 'scaleX(-1)' }} />
+            </div>
+            <div className="flex gap-2">
+              <Button className="flex-1 gap-2" onClick={handleFaceCapture}>
+                <Camera className="h-4 w-4" />
+                Capturar e Registrar
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={cancelFaceCapture}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
