@@ -95,11 +95,12 @@ const Dashboard = () => {
     if (currentMonthCredit) {
       const paidOverride = currentMonthCredit.paidOvertimeHours;
       const bankOverride = Math.max(0, baseSummary.totalOvertimeHours - paidOverride);
+      const hourlyRate = settings.hourly_rate;
       return {
         ...baseSummary,
         paidOvertimeHours: paidOverride,
         bankOvertimeHours: bankOverride,
-        estimatedOvertimePay: baseSummary.hourlyRate !== null ? paidOverride * baseSummary.hourlyRate : null,
+        estimatedOvertimePay: hourlyRate ? Math.round(paidOverride * hourlyRate * 100) / 100 : null,
       };
     }
 
