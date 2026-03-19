@@ -27,6 +27,7 @@ const Settings = () => {
   const [breakDuration, setBreakDuration] = useState(1);
   const [hourlyRate, setHourlyRate] = useState<string>('');
   const [monthlySalary, setMonthlySalary] = useState<string>('');
+  const [closingDay, setClosingDay] = useState<string>('');
 
   // Calcula valor/hora: salário / (horas semanais * 52 / 12)
   const monthlyDivisor = weeklyHours * (52 / 12);
@@ -47,6 +48,7 @@ const Settings = () => {
       setBreakDuration(settings.break_duration_hours);
       setHourlyRate(settings.hourly_rate?.toString() || '');
       setMonthlySalary((settings as any).monthly_salary?.toString() || '');
+      setClosingDay(settings.closing_day ? String(settings.closing_day) : '');
     }
   }, [settings]);
 
@@ -80,6 +82,7 @@ const Settings = () => {
         break_duration_hours: breakDuration,
         hourly_rate: computedRate,
         monthly_salary: monthlySalary ? parseFloat(monthlySalary) : null,
+        closing_day: closingDay ? parseInt(closingDay) : null,
       } as any);
       toast.success('Configurações salvas!');
     } catch {
@@ -206,6 +209,22 @@ const Settings = () => {
               <div>
                 <Label>Duração intervalo (h)</Label>
                 <Input type="number" value={breakDuration} onChange={e => setBreakDuration(Number(e.target.value))} min={0} max={3} step={0.5} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Dia de fechamento do ponto</Label>
+                <Input
+                  type="number"
+                  placeholder="Vazio = mês normal"
+                  value={closingDay}
+                  onChange={e => setClosingDay(e.target.value)}
+                  min={1}
+                  max={28}
+                />
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  {closingDay ? `O mês fecha no dia ${closingDay}. Ex: Março = dia ${parseInt(closingDay) + 1} de Fev a ${closingDay} de Mar.` : 'Deixe vazio para usar o mês normal (1 a 30/31).'}
+                </p>
               </div>
             </div>
           </CardContent>

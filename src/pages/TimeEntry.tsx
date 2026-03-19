@@ -28,6 +28,7 @@ const TimeEntry = () => {
   const [exitTime, setExitTime] = useState('21:00');
   const [entryType, setEntryType] = useState('work');
   const [isPunching, setIsPunching] = useState(false);
+  const [autoPunchDetailDate, setAutoPunchDetailDate] = useState<string | null>(null);
 
   const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
   const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`;
@@ -383,15 +384,26 @@ const TimeEntry = () => {
             {days.map((day) => {
               const dateStr = getDateStr(day);
               const dayEntries = entriesByDate[dateStr] || [];
+              const dayPunches = punchesByDate[dateStr] || [];
               const dayOfWeek = day.getDay();
               const isWork = settings ? getRegularHoursForDay(dayOfWeek, settings.work_days) > 0 : false;
               const isToday = dateStr === today;
               const hasEntries = dayEntries.length > 0;
+              const hasPunches = dayPunches.length > 0;
 
               let calc = null;
               if (hasEntries && settings) {
                 calc = calculateDay(dateStr, dayEntries, settings);
               }
+
+              const handleCalendarClick = () => {
+                if (hasPunches && !hasEntries) {
+                  // Auto-punch day without manual entries: show punch detail popup
+                  setAutoPunchDetailDate(dateStr);
+                } else {
+                  openAddDialog(dateStr);
+                }
+              };
 
               return (
                 <motion.div
@@ -400,11 +412,12 @@ const TimeEntry = () => {
                   whileTap={{ scale: 0.95 }}
                   className={`relative cursor-pointer rounded-lg border p-1.5 text-xs transition-colors
                     ${isToday ? 'border-primary bg-accent' : 'border-border/50'}
-                    ${isWork && !hasEntries ? 'bg-card' : ''}
                     ${hasEntries ? 'bg-success/10 border-success/30' : ''}
-                    ${!isWork && !hasEntries ? 'bg-muted/30' : ''}
+                    ${!hasEntries && hasPunches ? 'bg-blue-500/10 border-blue-500/30' : ''}
+                    ${isWork && !hasEntries && !hasPunches ? 'bg-card' : ''}
+                    ${!isWork && !hasEntries && !hasPunches ? 'bg-muted/30' : ''}
                   `}
-                  onClick={() => openAddDialog(dateStr)}
+                  onClick={handleCalendarClick}
                 >
                   <div className={`font-medium ${isToday ? 'text-primary' : 'text-foreground'}`}>
                     {day.getDate()}
@@ -414,8 +427,16 @@ const TimeEntry = () => {
                       {formatHoursMinutes(calc.netWorkedHours)}
                     </div>
                   )}
+                  {!hasEntries && hasPunches && (
+                    <div className="mt-0.5 text-[10px] text-blue-500 font-medium">
+                      {formatHoursMinutes(getPunchWorkedInfo(dayPunches).hours)}
+                    </div>
+                  )}
                   {hasEntries && (
                     <div className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-success" />
+                  )}
+                  {!hasEntries && hasPunches && (
+                    <div className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-blue-500" />
                   )}
                 </motion.div>
               );
@@ -547,6 +568,55 @@ const TimeEntry = () => {
               {addEntry.isPending ? 'Salvando...' : 'Salvar'}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Auto punch detail popup */}
+      <Dialog open={!!autoPunchDetailDate} onOpenChange={(open) => !open && setAutoPunchDetailDate(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Marcações Automáticas — {autoPunchDetailDate && new Date(autoPunchDetailDate + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+            </DialogTitle>
+          </DialogHeader>
+          {autoPunchDetailDate && (punchesByDate[autoPunchDetailDate] || []).length > 0 && (
+            <div className="space-y-3">
+              {(punchesByDate[autoPunchDetailDate] || []).sort((a, b) => a.punch_number - b.punch_number).map(punch => (
+                <div key={punch.id} className="rounded-lg bg-muted/50 p-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                      {punch.punch_number}
+                    </span>
+                    <span className="font-semibold">{PUNCH_LABELS[punch.punch_number - 1]}</span>
+                    <span className="text-muted-foreground">— {punch.punch_time}</span>
+                  </div>
+                  {punch.address && (
+                    <div className="mt-1 flex items-start gap-1 text-xs text-muted-foreground">
+                      <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
+                      <span>{punch.address}</span>
+                    </div>
+                  )}
+                  {punch.latitude && punch.longitude && (
+                    <div className="mt-1 text-[10px] text-muted-foreground">
+                      📍 {punch.latitude.toFixed(5)}, {punch.longitude.toFixed(5)}
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div className="rounded-lg bg-blue-500/10 p-2 text-xs">
+                <div className="flex justify-between">
+                  <span>Total trabalhado:</span>
+                  <span className="font-semibold text-blue-600">{formatHoursMinutes(getPunchWorkedInfo(punchesByDate[autoPunchDetailDate]).hours)}</span>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" className="w-full" onClick={() => {
+                setAutoPunchDetailDate(null);
+                if (autoPunchDetailDate) openAddDialog(autoPunchDetailDate);
+              }}>
+                Adicionar lançamento manual neste dia
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
