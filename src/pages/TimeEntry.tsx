@@ -352,6 +352,16 @@ const TimeEntry = () => {
               <CardTitle className="text-base">Marcar Ponto — {new Date().toLocaleDateString('pt-BR')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Validation method indicator */}
+              {settings?.punch_validation_method && settings.punch_validation_method !== 'none' && (
+                <div className="flex items-center gap-2 rounded-lg bg-accent/50 p-2 text-xs text-muted-foreground">
+                  {settings.punch_validation_method === 'biometric' ? (
+                    <><Fingerprint className="h-3.5 w-3.5 text-primary" /><span>Validação por biometria ativa</span></>
+                  ) : (
+                    <><Camera className="h-3.5 w-3.5 text-primary" /><span>Validação por captura facial ativa</span></>
+                  )}
+                </div>
+              )}
               <div className="text-center">
                 <p className="mb-1 text-sm text-muted-foreground">
                   {nextPunchNumber <= 4
