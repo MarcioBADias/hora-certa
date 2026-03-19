@@ -50,6 +50,7 @@ const Settings = () => {
       setMonthlySalary((settings as any).monthly_salary?.toString() || '');
       setClosingDay(settings.closing_day ? String(settings.closing_day) : '');
     }
+  }, [settings]);
 
   const toggleDay = (day: number, checked: boolean) => {
     if (checked) {
