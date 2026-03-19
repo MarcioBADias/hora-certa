@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { motion } from 'framer-motion';
-import { Hourglass, TrendingUp, TrendingDown, AlertTriangle, Minus, ChevronDown, ChevronUp, Clock, MapPin, Pencil } from 'lucide-react';
+import { Hourglass, TrendingUp, TrendingDown, AlertTriangle, Minus, ChevronDown, ChevronUp, Clock, MapPin, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -64,10 +64,11 @@ const HourBank = () => {
   const expiredCredits = autoCredits.filter(c => isExpired(c.expiresAt));
 
   // FIFO: compute which credits will be consumed by a debit
+  // Shows NET available hours per month (extras - pagas), oldest first
   const computeFifoConsumption = (hoursToDebit: number) => {
     const sorted = [...activeCredits].sort((a, b) => a.month.localeCompare(b.month));
     let remaining = hoursToDebit;
-    const consumed: { monthLabel: string; hours: number; dailyDetails: DayDetail[] }[] = [];
+    const consumed: { monthLabel: string; hours: number; bankHours: number; totalOvertimeHours: number; paidOvertimeHours: number; dailyDetails: DayDetail[] }[] = [];
 
     for (const credit of sorted) {
       if (remaining <= 0) break;
@@ -75,6 +76,9 @@ const HourBank = () => {
       consumed.push({
         monthLabel: credit.monthLabel,
         hours: take,
+        bankHours: credit.bankHours,
+        totalOvertimeHours: credit.totalOvertimeHours,
+        paidOvertimeHours: credit.paidOvertimeHours,
         dailyDetails: credit.dailyDetails,
       });
       remaining -= take;
@@ -154,7 +158,10 @@ const HourBank = () => {
         expires_at: null,
       });
 
-      queryClient.invalidateQueries({ queryKey: ['hour-bank'] });
+      // Invalidate both hour-bank and bank-credits queries
+      await queryClient.invalidateQueries({ queryKey: ['hour-bank'] });
+      await queryClient.invalidateQueries({ queryKey: ['time-entries'] });
+      await queryClient.invalidateQueries({ queryKey: ['clock-punches'] });
       toast.success('Horas pagas atualizadas!');
       setEditPaidCredit(null);
     } catch {
@@ -212,6 +219,29 @@ const HourBank = () => {
                   <Label>Descrição (opcional)</Label>
                   <Input placeholder="Ex: Folga, Consulta médica..." value={debitDescription} onChange={e => setDebitDescription(e.target.value)} />
                 </div>
+
+                {/* Preview NET available hours per month */}
+                {activeCredits.length > 0 && (
+                  <div className="rounded-lg border border-border p-3 space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Horas disponíveis no banco (líquidas):</p>
+                    {[...activeCredits].sort((a, b) => a.month.localeCompare(b.month)).map(credit => (
+                      <div key={credit.month} className="flex justify-between text-xs">
+                        <span>{credit.monthLabel}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">
+                            ({formatHoursMinutes(credit.totalOvertimeHours)} extras − {formatHoursMinutes(credit.paidOvertimeHours)} pagas)
+                          </span>
+                          <span className="font-semibold text-success">{formatHoursMinutes(credit.bankHours)}</span>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="border-t border-border pt-1 flex justify-between text-xs font-semibold">
+                      <span>Total disponível:</span>
+                      <span className="text-success">{formatHoursMinutes(balance)}</span>
+                    </div>
+                  </div>
+                )}
+
                 <Button onClick={handleDebitClick} className="w-full" disabled={addBankEntry.isPending}>
                   {addBankEntry.isPending ? 'Salvando...' : 'Confirmar Débito'}
                 </Button>
@@ -228,15 +258,29 @@ const HourBank = () => {
             <AlertDialogTitle>Confirmar Débito de {formatHoursMinutes(debitHoursNum)}</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3">
-                <p>Essas horas serão descontadas das horas extras acumuladas dos seguintes períodos (do mais antigo para o mais recente):</p>
+                <p>Essas horas serão descontadas do banco (do mais antigo para o mais recente):</p>
                 {fifoResult && fifoResult.consumed.map((item, idx) => (
-                  <div key={idx} className="rounded-lg border border-border p-3 text-sm">
+                  <div key={idx} className="rounded-lg border border-border p-3 text-sm space-y-1">
                     <div className="flex items-center justify-between font-medium">
                       <span>{item.monthLabel}</span>
                       <span className="text-destructive">-{formatHoursMinutes(item.hours)}</span>
                     </div>
+                    <div className="text-xs text-muted-foreground space-y-0.5">
+                      <div className="flex justify-between">
+                        <span>Total extras no mês:</span>
+                        <span>{formatHoursMinutes(item.totalOvertimeHours)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Horas pagas:</span>
+                        <span>{formatHoursMinutes(item.paidOvertimeHours)}</span>
+                      </div>
+                      <div className="flex justify-between font-medium text-foreground">
+                        <span>Disponível no banco:</span>
+                        <span>{formatHoursMinutes(item.bankHours)}</span>
+                      </div>
+                    </div>
                     {item.dailyDetails.length > 0 && (
-                      <div className="mt-2 space-y-1">
+                      <div className="mt-2 space-y-1 border-t border-border pt-1">
                         {item.dailyDetails.map(d => (
                           <div key={d.date} className="flex justify-between text-xs text-muted-foreground">
                             <span>{new Date(d.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}</span>
@@ -357,14 +401,6 @@ const HourBank = () => {
                         <span className="text-muted-foreground">{credit.monthLabel}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={(e) => handleEditPaidOpen(credit, e)}
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </Button>
                         <span className="text-xs text-muted-foreground">
                           Exp: {new Date(credit.expiresAt + 'T12:00:00').toLocaleDateString('pt-BR')}
                         </span>
@@ -386,8 +422,19 @@ const HourBank = () => {
                             <span className="font-semibold">{formatHoursMinutes(credit.totalOvertimeHours)}</span>
                           </div>
                           <div className="flex justify-between text-primary">
-                            <span>Horas pagas{credit.customPaidHours !== null ? ' (editado)' : ''}:</span>
-                            <span className="font-semibold">{formatHoursMinutes(credit.paidOvertimeHours)}</span>
+                            <span className="flex items-center gap-1">
+                              Horas pagas{credit.customPaidHours !== null ? ' (editado)' : ''}:
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <span className="font-semibold">{formatHoursMinutes(credit.paidOvertimeHours)}</span>
+                              <button
+                                className="inline-flex items-center justify-center rounded-md p-0.5 hover:bg-accent transition-colors"
+                                onClick={(e) => handleEditPaidOpen(credit, e)}
+                                title="Editar horas pagas"
+                              >
+                                <Settings2 className="h-3 w-3 text-muted-foreground hover:text-primary" />
+                              </button>
+                            </span>
                           </div>
                           <div className="flex justify-between text-success font-semibold">
                             <span>Horas em banco:</span>
