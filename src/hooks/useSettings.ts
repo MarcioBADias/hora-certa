@@ -38,6 +38,7 @@ export function useSettings() {
         ...data,
         work_days: parseWorkDays(data.work_days),
         closing_day: (data as any).closing_day ?? null,
+        punch_validation_method: ((data as any).punch_validation_method || 'none') as PunchValidationMethod,
       };
     },
     enabled: !!user,
