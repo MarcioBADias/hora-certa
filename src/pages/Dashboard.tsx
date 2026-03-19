@@ -17,12 +17,19 @@ const Dashboard = () => {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
 
-  const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-  const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`;
+  const { settings } = useSettings();
+
+  // Use payroll month range based on closing_day setting
+  const payrollRange = useMemo(() => {
+    const closingDay = settings?.closing_day ?? null;
+    return getPayrollMonthRange(year, month, closingDay);
+  }, [year, month, settings?.closing_day]);
+
+  const startDate = payrollRange.start.toISOString().split('T')[0];
+  const endDate = payrollRange.end.toISOString().split('T')[0];
 
   const { entries } = useTimeEntries(startDate, endDate);
   const { punches } = useClockPunches(startDate, endDate);
-  const { settings } = useSettings();
   const { entries: bankEntries } = useHourBank();
   const { credits: autoCredits } = useBankCredits();
 
