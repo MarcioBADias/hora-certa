@@ -81,6 +81,7 @@ const Settings = () => {
         break_duration_hours: breakDuration,
         hourly_rate: computedRate,
         monthly_salary: monthlySalary ? parseFloat(monthlySalary) : null,
+        closing_day: closingDay ? parseInt(closingDay) : null,
       } as any);
       toast.success('Configurações salvas!');
     } catch {

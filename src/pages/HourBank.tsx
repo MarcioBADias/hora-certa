@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useHourBank } from '@/hooks/useHourBank';
-import { useBankCredits, DayDetail } from '@/hooks/useBankCredits';
+import { useBankCredits, BankCredit, DayDetail } from '@/hooks/useBankCredits';
+import { useSettings } from '@/hooks/useSettings';
 import { formatHoursMinutes, daysUntilExpiration, isExpired, isExpiringSoon } from '@/lib/calculations';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,14 +11,20 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { motion } from 'framer-motion';
-import { Hourglass, TrendingUp, TrendingDown, AlertTriangle, Minus, ChevronDown, ChevronUp, Clock, MapPin } from 'lucide-react';
+import { Hourglass, TrendingUp, TrendingDown, AlertTriangle, Minus, ChevronDown, ChevronUp, Clock, MapPin, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
 
 const PUNCH_LABELS = ['1ª Entrada', '1ª Saída', '2ª Entrada', '2ª Saída'];
 
 const HourBank = () => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { entries: manualEntries, addBankEntry, balance: manualBalance } = useHourBank();
   const { credits: autoCredits } = useBankCredits();
+  const { settings } = useSettings();
 
   const [debitOpen, setDebitOpen] = useState(false);
   const [debitHours, setDebitHours] = useState('');
@@ -27,6 +34,11 @@ const HourBank = () => {
 
   const [expandedCredit, setExpandedCredit] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<DayDetail | null>(null);
+
+  // Edit paid hours
+  const [editPaidCredit, setEditPaidCredit] = useState<BankCredit | null>(null);
+  const [editPaidHours, setEditPaidHours] = useState('');
+  const [savingPaid, setSavingPaid] = useState(false);
 
   // Calculate total auto-credit balance (non-expired)
   const autoCreditBalance = useMemo(() => {
@@ -101,6 +113,54 @@ const HourBank = () => {
       setDebitDescription('');
     } catch {
       toast.error('Erro ao registrar débito');
+    }
+  };
+
+  const handleEditPaidOpen = (credit: BankCredit, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditPaidCredit(credit);
+    setEditPaidHours(
+      credit.customPaidHours !== null
+        ? String(credit.customPaidHours)
+        : String(settings?.max_monthly_paid_overtime ?? 44)
+    );
+  };
+
+  const handleSavePaidOverride = async () => {
+    if (!editPaidCredit || !user) return;
+    const hours = parseFloat(editPaidHours);
+    if (isNaN(hours) || hours < 0) {
+      toast.error('Informe um valor válido');
+      return;
+    }
+    setSavingPaid(true);
+    try {
+      const monthDate = editPaidCredit.month + '-01';
+      // Delete existing override for this month
+      await supabase
+        .from('hour_bank')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('type', 'paid_override')
+        .eq('date', monthDate);
+
+      // Insert new override
+      await supabase.from('hour_bank').insert({
+        user_id: user.id,
+        date: monthDate,
+        hours,
+        type: 'paid_override',
+        description: `Horas pagas ${editPaidCredit.monthLabel}`,
+        expires_at: null,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['hour-bank'] });
+      toast.success('Horas pagas atualizadas!');
+      setEditPaidCredit(null);
+    } catch {
+      toast.error('Erro ao salvar');
+    } finally {
+      setSavingPaid(false);
     }
   };
 
@@ -198,6 +258,59 @@ const HourBank = () => {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Edit paid hours dialog */}
+      <Dialog open={!!editPaidCredit} onOpenChange={(open) => !open && setEditPaidCredit(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Horas Pagas — {editPaidCredit?.monthLabel}</DialogTitle>
+          </DialogHeader>
+          {editPaidCredit && (
+            <div className="space-y-4 pt-2">
+              <div className="rounded-lg bg-accent/50 p-3 text-sm space-y-1">
+                <div className="flex justify-between">
+                  <span>Total de horas extras no mês:</span>
+                  <span className="font-semibold">{formatHoursMinutes(editPaidCredit.totalOvertimeHours)}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Padrão das configurações:</span>
+                  <span>{formatHoursMinutes(settings?.max_monthly_paid_overtime ?? 44)}</span>
+                </div>
+              </div>
+              <div>
+                <Label>Quantas horas extras foram pagas neste mês?</Label>
+                <Input
+                  type="number"
+                  value={editPaidHours}
+                  onChange={e => setEditPaidHours(e.target.value)}
+                  min={0}
+                  step={0.5}
+                  placeholder="Ex: 44"
+                />
+              </div>
+              {(() => {
+                const paid = parseFloat(editPaidHours) || 0;
+                const newBank = Math.max(0, editPaidCredit.totalOvertimeHours - paid);
+                return (
+                  <div className="rounded-lg border border-border p-3 text-sm space-y-1">
+                    <div className="flex justify-between">
+                      <span>Horas pagas:</span>
+                      <span className="font-semibold text-primary">{formatHoursMinutes(paid)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Irá para o banco:</span>
+                      <span className="font-semibold text-success">{formatHoursMinutes(newBank)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+              <Button onClick={handleSavePaidOverride} className="w-full" disabled={savingPaid}>
+                {savingPaid ? 'Salvando...' : 'Salvar'}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Balance card */}
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}>
         <Card className={balance >= 0 ? 'border-success/30 bg-success/5' : 'border-destructive/30 bg-destructive/5'}>
@@ -227,7 +340,7 @@ const HourBank = () => {
           </CardHeader>
           <CardContent>
             {activeCredits.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum crédito ativo — horas extras acima de 44h/mês serão creditadas aqui automaticamente</p>
+              <p className="text-sm text-muted-foreground">Nenhum crédito ativo — horas extras acima do limite pago serão creditadas aqui automaticamente</p>
             ) : (
               <div className="space-y-2">
                 {activeCredits.sort((a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime()).map(credit => (
@@ -244,6 +357,14 @@ const HourBank = () => {
                         <span className="text-muted-foreground">{credit.monthLabel}</span>
                       </div>
                       <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={(e) => handleEditPaidOpen(credit, e)}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
                         <span className="text-xs text-muted-foreground">
                           Exp: {new Date(credit.expiresAt + 'T12:00:00').toLocaleDateString('pt-BR')}
                         </span>
@@ -251,13 +372,30 @@ const HourBank = () => {
                       </div>
                     </div>
 
-                    {/* Daily breakdown */}
-                    {expandedCredit === credit.month && credit.dailyDetails.length > 0 && (
+                    {/* Summary breakdown */}
+                    {expandedCredit === credit.month && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         className="ml-4 mt-1 space-y-1 border-l-2 border-success/20 pl-3"
                       >
+                        {/* Month summary */}
+                        <div className="rounded-md bg-accent/40 p-2 text-xs space-y-0.5 mb-2">
+                          <div className="flex justify-between">
+                            <span>Total horas extras:</span>
+                            <span className="font-semibold">{formatHoursMinutes(credit.totalOvertimeHours)}</span>
+                          </div>
+                          <div className="flex justify-between text-primary">
+                            <span>Horas pagas{credit.customPaidHours !== null ? ' (editado)' : ''}:</span>
+                            <span className="font-semibold">{formatHoursMinutes(credit.paidOvertimeHours)}</span>
+                          </div>
+                          <div className="flex justify-between text-success font-semibold">
+                            <span>Horas em banco:</span>
+                            <span>{formatHoursMinutes(credit.bankHours)}</span>
+                          </div>
+                        </div>
+
+                        {/* Daily details */}
                         {credit.dailyDetails.map(day => (
                           <div
                             key={day.date}
@@ -296,7 +434,6 @@ const HourBank = () => {
           </DialogHeader>
           {selectedDay && (
             <div className="space-y-4">
-              {/* Summary */}
               <div className="rounded-lg bg-accent/50 p-3 text-sm">
                 <div className="flex justify-between">
                   <span>Horas trabalhadas:</span>
@@ -312,7 +449,6 @@ const HourBank = () => {
                 </div>
               </div>
 
-              {/* Punches */}
               {selectedDay.punches.length > 0 && (
                 <div>
                   <h4 className="mb-2 text-sm font-medium text-muted-foreground">Marcações Automáticas</h4>
@@ -336,7 +472,6 @@ const HourBank = () => {
                 </div>
               )}
 
-              {/* Manual entries */}
               {selectedDay.manualEntries.length > 0 && (
                 <div>
                   <h4 className="mb-2 text-sm font-medium text-muted-foreground">Lançamentos Manuais</h4>
