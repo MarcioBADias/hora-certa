@@ -124,6 +124,7 @@ export type Database = {
           bank_expiration_days: number
           break_duration_hours: number
           break_threshold_hours: number
+          closing_day: number | null
           closing_time: string
           created_at: string
           hourly_rate: number | null
@@ -141,6 +142,7 @@ export type Database = {
           bank_expiration_days?: number
           break_duration_hours?: number
           break_threshold_hours?: number
+          closing_day?: number | null
           closing_time?: string
           created_at?: string
           hourly_rate?: number | null
@@ -158,6 +160,7 @@ export type Database = {
           bank_expiration_days?: number
           break_duration_hours?: number
           break_threshold_hours?: number
+          closing_day?: number | null
           closing_time?: string
           created_at?: string
           hourly_rate?: number | null
