@@ -28,6 +28,7 @@ const TimeEntry = () => {
   const [exitTime, setExitTime] = useState('21:00');
   const [entryType, setEntryType] = useState('work');
   const [isPunching, setIsPunching] = useState(false);
+  const [autoPunchDetailDate, setAutoPunchDetailDate] = useState<string | null>(null);
 
   const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
   const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`;
