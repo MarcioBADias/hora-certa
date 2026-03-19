@@ -22,6 +22,7 @@ export type Database = {
           id: string
           latitude: number | null
           longitude: number | null
+          photo_url: string | null
           punch_number: number
           punch_time: string
           user_id: string
@@ -33,6 +34,7 @@ export type Database = {
           id?: string
           latitude?: number | null
           longitude?: number | null
+          photo_url?: string | null
           punch_number: number
           punch_time: string
           user_id: string
@@ -44,6 +46,7 @@ export type Database = {
           id?: string
           latitude?: number | null
           longitude?: number | null
+          photo_url?: string | null
           punch_number?: number
           punch_time?: string
           user_id?: string
@@ -133,6 +136,7 @@ export type Database = {
           max_monthly_paid_overtime: number
           monthly_salary: number | null
           opening_time: string
+          punch_validation_method: string
           updated_at: string
           user_id: string
           weekly_hours: number
@@ -151,6 +155,7 @@ export type Database = {
           max_monthly_paid_overtime?: number
           monthly_salary?: number | null
           opening_time?: string
+          punch_validation_method?: string
           updated_at?: string
           user_id: string
           weekly_hours?: number
@@ -169,6 +174,7 @@ export type Database = {
           max_monthly_paid_overtime?: number
           monthly_salary?: number | null
           opening_time?: string
+          punch_validation_method?: string
           updated_at?: string
           user_id?: string
           weekly_hours?: number
