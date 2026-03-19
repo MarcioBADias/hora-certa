@@ -56,6 +56,18 @@ const features = [
     image: screenshotBanco,
   },
   {
+    icon: Fingerprint,
+    title: "Biometria do Dispositivo",
+    description: "Valide marcações com a biometria nativa do seu celular — impressão digital ou Face ID — garantindo que só você registre seu ponto.",
+    image: screenshotConfig,
+  },
+  {
+    icon: Camera,
+    title: "Reconhecimento Facial",
+    description: "Capture uma foto de referência e valide cada marcação com reconhecimento facial via câmera. Segurança extra com registro visual.",
+    image: screenshotPonto,
+  },
+  {
     icon: MapPin,
     title: "Configurações Flexíveis",
     description: "Defina carga horária, salário, dias de trabalho e regras de horas extras personalizadas.",
