@@ -4,6 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, CalendarDays, Hourglass, Settings, LogOut, Menu, X, Clock, FileText, Info } from 'lucide-react';
+import InstallPwaButton from '@/components/InstallPwaButton';
+import PwaReloadPrompt from '@/components/PwaReloadPrompt';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
