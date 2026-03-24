@@ -13,6 +13,7 @@ import Settings from "@/pages/Settings";
 import Reports from "@/pages/Reports";
 import NotFound from "@/pages/NotFound";
 import LandingPage from "@/pages/LandingPage";
+import InstallPwaBanner from "@/components/InstallPwaBanner";
 
 const queryClient = new QueryClient();
 
