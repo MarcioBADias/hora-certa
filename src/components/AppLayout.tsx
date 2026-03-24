@@ -4,6 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, CalendarDays, Hourglass, Settings, LogOut, Menu, X, Clock, FileText, Info } from 'lucide-react';
+import InstallPwaButton from '@/components/InstallPwaButton';
+import PwaReloadPrompt from '@/components/PwaReloadPrompt';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -45,7 +47,8 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           })}
         </nav>
 
-        <div className="border-t border-sidebar-border p-3">
+        <div className="border-t border-sidebar-border p-3 space-y-1">
+          <InstallPwaButton />
           <Button variant="ghost" className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground" onClick={signOut}>
             <LogOut className="h-4 w-4" />
             Sair
@@ -102,6 +105,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         <main className="flex-1 overflow-auto">
           {children}
         </main>
+        <PwaReloadPrompt />
 
         {/* Mobile bottom nav */}
         <nav className="flex border-t border-border bg-card md:hidden">
