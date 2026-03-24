@@ -105,6 +105,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         <main className="flex-1 overflow-auto">
           {children}
         </main>
+        <PwaReloadPrompt />
 
         {/* Mobile bottom nav */}
         <nav className="flex border-t border-border bg-card md:hidden">
