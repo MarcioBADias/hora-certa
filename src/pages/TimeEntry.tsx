@@ -3,6 +3,7 @@ import { useTimeEntries } from '@/hooks/useTimeEntries';
 import { useClockPunches } from '@/hooks/useClockPunches';
 import { useSettings } from '@/hooks/useSettings';
 import { useHourBank } from '@/hooks/useHourBank';
+import { useDayOverrides, DayClassification } from '@/hooks/useDayOverrides';
 import { useAuth } from '@/contexts/AuthContext';
 import { calculateDay, formatHoursMinutes, DAY_NAMES, MONTH_NAMES, getDaysInMonth, getRegularHoursForDay } from '@/lib/calculations';
 import { Button } from '@/components/ui/button';
