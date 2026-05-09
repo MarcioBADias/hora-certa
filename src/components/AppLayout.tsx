@@ -102,13 +102,13 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         </AnimatePresence>
 
         {/* Content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto pb-20 md:pb-0">
           {children}
         </main>
         <PwaReloadPrompt />
 
-        {/* Mobile bottom nav */}
-        <nav className="flex border-t border-border bg-card md:hidden">
+        {/* Mobile bottom nav - fixed */}
+        <nav className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-border bg-card pb-[env(safe-area-inset-bottom)] shadow-lg md:hidden">
           {navItems.slice(0, 5).map(item => {
             const active = location.pathname === item.path;
             return (
