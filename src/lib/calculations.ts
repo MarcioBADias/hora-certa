@@ -82,10 +82,13 @@ export function getRegularHoursForDay(dayOfWeek: number, workDays: WorkDay[]): n
   return wd ? wd.hours : 0;
 }
 
+export type DayClassification = 'overtime' | 'day_off';
+
 export function calculateDay(
   date: string,
   entries: { entry_time: string; exit_time: string }[],
-  settings: UserSettings
+  settings: UserSettings,
+  classification?: DayClassification
 ): DayCalculation {
   const d = new Date(date + 'T12:00:00');
   const dayOfWeek = d.getDay();
@@ -110,6 +113,9 @@ export function calculateDay(
   if (isWorkDay) {
     overtimeHours = Math.max(0, netWorkedHours - regularHours);
     overtimeHours = Math.min(overtimeHours, settings.max_daily_overtime);
+  } else if (classification === 'day_off') {
+    // Folga em dia não-útil: registra horários mas não conta hora extra
+    overtimeHours = 0;
   } else {
     // Working on a non-work day = all hours are overtime
     overtimeHours = Math.min(netWorkedHours, settings.max_daily_overtime);

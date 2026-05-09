@@ -4,6 +4,7 @@ import { useClockPunches } from '@/hooks/useClockPunches';
 import { useSettings } from '@/hooks/useSettings';
 import { useHourBank } from '@/hooks/useHourBank';
 import { useBankCredits } from '@/hooks/useBankCredits';
+import { useDayOverrides } from '@/hooks/useDayOverrides';
 import { punchesToEntries } from '@/lib/punchesToEntries';
 import { calculateDay, calculateMonthSummary, formatHoursMinutes, MONTH_NAMES, getDaysInMonth, getPayrollMonthRange, daysUntilExpiration, isExpiringSoon, isExpired } from '@/lib/calculations';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,6 +33,7 @@ const Dashboard = () => {
   const { punches } = useClockPunches(startDate, endDate);
   const { entries: bankEntries } = useHourBank();
   const { credits: autoCredits } = useBankCredits();
+  const { overridesByDate } = useDayOverrides(startDate, endDate);
 
   // Calculate real bank balance: auto credits (non-expired) - manual debits
   const balance = useMemo(() => {
@@ -99,7 +101,7 @@ const Dashboard = () => {
         const dateStr = d.toISOString().split('T')[0];
         const dayEntries = unifiedByDate[dateStr] || [];
         if (dayEntries.length === 0) return null;
-        return calculateDay(dateStr, dayEntries, settings);
+        return calculateDay(dateStr, dayEntries, settings, overridesByDate[dateStr]);
       })
       .filter(Boolean) as any[];
     const baseSummary = calculateMonthSummary(dayCalcs, settings);
@@ -118,19 +120,19 @@ const Dashboard = () => {
     }
 
     return baseSummary;
-  }, [unifiedByDate, settings, year, month, currentMonthCredit, payrollRange]);
+  }, [unifiedByDate, settings, year, month, currentMonthCredit, payrollRange, overridesByDate]);
 
   const chartData = useMemo(() => {
     if (!settings) return [];
     return Object.keys(unifiedByDate).sort().map(date => {
-      const calc = calculateDay(date, unifiedByDate[date], settings);
+      const calc = calculateDay(date, unifiedByDate[date], settings, overridesByDate[date]);
       return {
         date: new Date(date + 'T12:00:00').getDate().toString(),
         regular: Math.round(calc.regularHours * 100) / 100,
         overtime: Math.round(calc.overtimeHours * 100) / 100,
       };
     });
-  }, [unifiedByDate, settings]);
+  }, [unifiedByDate, settings, overridesByDate]);
 
   // expiringCredits already computed above from autoCredits
 

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useTimeEntries } from '@/hooks/useTimeEntries';
 import { useClockPunches } from '@/hooks/useClockPunches';
 import { useSettings } from '@/hooks/useSettings';
+import { useDayOverrides } from '@/hooks/useDayOverrides';
 import { calculateDay, formatHoursMinutes, MONTH_NAMES } from '@/lib/calculations';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -59,6 +60,7 @@ const Reports = () => {
   const { entries } = useTimeEntries(range.start, range.end);
   const { punches } = useClockPunches(range.start, range.end);
   const { settings } = useSettings();
+  const { overridesByDate } = useDayOverrides(range.start, range.end);
 
   // Build unified report rows
   const reportRows = useMemo(() => {
@@ -75,7 +77,7 @@ const Reports = () => {
       let manualHours = 0;
       let manualCalc = null;
       if (dayEntries.length > 0 && settings) {
-        manualCalc = calculateDay(date, dayEntries, settings);
+        manualCalc = calculateDay(date, dayEntries, settings, overridesByDate[date]);
         manualHours = manualCalc.netWorkedHours;
       }
 
@@ -102,7 +104,7 @@ const Reports = () => {
         overtime: manualCalc?.overtimeHours || 0,
       };
     });
-  }, [entries, punches, settings]);
+  }, [entries, punches, settings, overridesByDate]);
 
   const totals = useMemo(() => {
     return {

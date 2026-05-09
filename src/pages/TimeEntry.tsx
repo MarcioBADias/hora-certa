@@ -3,6 +3,7 @@ import { useTimeEntries } from '@/hooks/useTimeEntries';
 import { useClockPunches } from '@/hooks/useClockPunches';
 import { useSettings } from '@/hooks/useSettings';
 import { useHourBank } from '@/hooks/useHourBank';
+import { useDayOverrides, DayClassification } from '@/hooks/useDayOverrides';
 import { useAuth } from '@/contexts/AuthContext';
 import { calculateDay, formatHoursMinutes, DAY_NAMES, MONTH_NAMES, getDaysInMonth, getRegularHoursForDay } from '@/lib/calculations';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ const TimeEntry = () => {
   const [isPunching, setIsPunching] = useState(false);
   const [autoPunchDetailDate, setAutoPunchDetailDate] = useState<string | null>(null);
   const [faceCaptureOpen, setFaceCaptureOpen] = useState(false);
+  const [classifyDialog, setClassifyDialog] = useState<{ date: string; onChoose: (c: DayClassification) => void } | null>(null);
   const faceCaptureResolveRef = useRef<((value: Blob | null) => void) | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -43,6 +45,7 @@ const TimeEntry = () => {
   const { entries, isLoading, addEntry, deleteEntry } = useTimeEntries(startDate, endDate);
   const { punches, addPunch, deletePunch } = useClockPunches(startDate, endDate);
   const { settings } = useSettings();
+  const { overridesByDate, setOverride } = useDayOverrides(startDate, endDate);
 
   const days = useMemo(() => getDaysInMonth(year, month), [year, month]);
 
@@ -75,6 +78,10 @@ const TimeEntry = () => {
 
   const handleAddEntry = async () => {
     if (!selectedDate) return;
+    if (entryType === 'work') {
+      const classification = await ensureClassification(selectedDate);
+      if (classification === null) return;
+    }
     try {
       await addEntry.mutateAsync({
         date: selectedDate,
@@ -212,11 +219,41 @@ const TimeEntry = () => {
     faceCaptureResolveRef.current = null;
   };
 
+  // Ask user to classify a non-work day before recording entries on it.
+  // Returns the classification, or null if user cancelled.
+  const ensureClassification = (date: string): Promise<DayClassification | null> => {
+    if (!settings) return Promise.resolve('overtime');
+    const d = new Date(date + 'T12:00:00');
+    const regular = getRegularHoursForDay(d.getDay(), settings.work_days);
+    if (regular > 0) return Promise.resolve('overtime'); // work day, no classification needed
+    if (overridesByDate[date]) return Promise.resolve(overridesByDate[date]);
+    return new Promise((resolve) => {
+      setClassifyDialog({
+        date,
+        onChoose: async (choice) => {
+          try {
+            await setOverride.mutateAsync({ date, classification: choice });
+            resolve(choice);
+          } catch {
+            toast.error('Erro ao salvar classificação');
+            resolve(null);
+          } finally {
+            setClassifyDialog(null);
+          }
+        },
+      });
+    });
+  };
+
   const handleClockPunch = useCallback(async () => {
     if (nextPunchNumber > 4) {
       toast.error('Todas as 4 marcações do dia já foram feitas');
       return;
     }
+
+    // For non-work days, ask user whether it's overtime or day off
+    const classification = await ensureClassification(today);
+    if (classification === null) return;
 
     const validationMethod = settings?.punch_validation_method || 'none';
 
@@ -793,6 +830,30 @@ const TimeEntry = () => {
           </div>
         </DialogContent>
       </Dialog>
+      {/* Day classification dialog (non-work day) */}
+      <AlertDialog open={!!classifyDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Dia fora da escala de trabalho</AlertDialogTitle>
+            <AlertDialogDescription>
+              {classifyDialog && (
+                <>
+                  O dia <strong>{new Date(classifyDialog.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</strong> não está marcado como dia útil nas suas configurações.
+                  <br />Como deseja classificar este dia?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => classifyDialog?.onChoose('day_off')}>
+              Folga (não conta horas)
+            </Button>
+            <Button onClick={() => classifyDialog?.onChoose('overtime')}>
+              Hora extra
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

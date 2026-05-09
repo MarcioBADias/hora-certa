@@ -3,6 +3,7 @@ import { useTimeEntries } from '@/hooks/useTimeEntries';
 import { useClockPunches } from '@/hooks/useClockPunches';
 import { useSettings } from '@/hooks/useSettings';
 import { useHourBank } from '@/hooks/useHourBank';
+import { useDayOverrides } from '@/hooks/useDayOverrides';
 import { calculateDay, calculateMonthSummary, getDaysInMonth, addDays, DayCalculation, getPayrollMonthRange } from '@/lib/calculations';
 import { punchesToEntries } from '@/lib/punchesToEntries';
 import { ClockPunch } from '@/hooks/useClockPunches';
@@ -34,6 +35,7 @@ export function useBankCredits() {
   const { punches } = useClockPunches();
   const { settings } = useSettings();
   const { entries: bankEntries } = useHourBank();
+  const { overridesByDate } = useDayOverrides();
 
   // Paid overrides stored in hour_bank with type='paid_override'
   const paidOverrides = useMemo(() => {
@@ -117,7 +119,7 @@ export function useBankCredits() {
 
       for (const [dateStr, dayEntries] of Object.entries(monthEntries)) {
         if (dayEntries.length === 0) continue;
-        const calc = calculateDay(dateStr, dayEntries, settings);
+        const calc = calculateDay(dateStr, dayEntries, settings, overridesByDate[dateStr]);
         dayCalcs.push(calc);
         dayDetailMap[dateStr] = calc;
       }
@@ -164,7 +166,7 @@ export function useBankCredits() {
     }
 
     return result.sort((a, b) => a.month.localeCompare(b.month));
-  }, [entries, punches, settings, paidOverrides]);
+  }, [entries, punches, settings, paidOverrides, overridesByDate]);
 
   return { credits };
 }
