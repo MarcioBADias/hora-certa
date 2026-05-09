@@ -45,6 +45,7 @@ const TimeEntry = () => {
   const { entries, isLoading, addEntry, deleteEntry } = useTimeEntries(startDate, endDate);
   const { punches, addPunch, deletePunch } = useClockPunches(startDate, endDate);
   const { settings } = useSettings();
+  const { overridesByDate, setOverride } = useDayOverrides(startDate, endDate);
 
   const days = useMemo(() => getDaysInMonth(year, month), [year, month]);
 
