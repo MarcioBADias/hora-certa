@@ -215,11 +215,41 @@ const TimeEntry = () => {
     faceCaptureResolveRef.current = null;
   };
 
+  // Ask user to classify a non-work day before recording entries on it.
+  // Returns the classification, or null if user cancelled.
+  const ensureClassification = (date: string): Promise<DayClassification | null> => {
+    if (!settings) return Promise.resolve('overtime');
+    const d = new Date(date + 'T12:00:00');
+    const regular = getRegularHoursForDay(d.getDay(), settings.work_days);
+    if (regular > 0) return Promise.resolve('overtime'); // work day, no classification needed
+    if (overridesByDate[date]) return Promise.resolve(overridesByDate[date]);
+    return new Promise((resolve) => {
+      setClassifyDialog({
+        date,
+        onChoose: async (choice) => {
+          try {
+            await setOverride.mutateAsync({ date, classification: choice });
+            resolve(choice);
+          } catch {
+            toast.error('Erro ao salvar classificação');
+            resolve(null);
+          } finally {
+            setClassifyDialog(null);
+          }
+        },
+      });
+    });
+  };
+
   const handleClockPunch = useCallback(async () => {
     if (nextPunchNumber > 4) {
       toast.error('Todas as 4 marcações do dia já foram feitas');
       return;
     }
+
+    // For non-work days, ask user whether it's overtime or day off
+    const classification = await ensureClassification(today);
+    if (classification === null) return;
 
     const validationMethod = settings?.punch_validation_method || 'none';
 
