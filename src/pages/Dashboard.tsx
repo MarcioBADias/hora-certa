@@ -101,7 +101,7 @@ const Dashboard = () => {
         const dateStr = d.toISOString().split('T')[0];
         const dayEntries = unifiedByDate[dateStr] || [];
         if (dayEntries.length === 0) return null;
-        return calculateDay(dateStr, dayEntries, settings);
+        return calculateDay(dateStr, dayEntries, settings, overridesByDate[dateStr]);
       })
       .filter(Boolean) as any[];
     const baseSummary = calculateMonthSummary(dayCalcs, settings);
@@ -120,7 +120,7 @@ const Dashboard = () => {
     }
 
     return baseSummary;
-  }, [unifiedByDate, settings, year, month, currentMonthCredit, payrollRange]);
+  }, [unifiedByDate, settings, year, month, currentMonthCredit, payrollRange, overridesByDate]);
 
   const chartData = useMemo(() => {
     if (!settings) return [];
