@@ -831,7 +831,7 @@ const TimeEntry = () => {
         </DialogContent>
       </Dialog>
       {/* Day classification dialog (non-work day) */}
-      <AlertDialog open={!!classifyDialog} onOpenChange={(open) => { if (!open) { classifyDialog?.onChoose; setClassifyDialog(null); } }}>
+      <AlertDialog open={!!classifyDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Dia fora da escala de trabalho</AlertDialogTitle>
