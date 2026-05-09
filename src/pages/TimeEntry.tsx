@@ -34,6 +34,7 @@ const TimeEntry = () => {
   const [isPunching, setIsPunching] = useState(false);
   const [autoPunchDetailDate, setAutoPunchDetailDate] = useState<string | null>(null);
   const [faceCaptureOpen, setFaceCaptureOpen] = useState(false);
+  const [classifyDialog, setClassifyDialog] = useState<{ date: string; onChoose: (c: DayClassification) => void } | null>(null);
   const faceCaptureResolveRef = useRef<((value: Blob | null) => void) | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
