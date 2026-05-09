@@ -113,6 +113,9 @@ export function calculateDay(
   if (isWorkDay) {
     overtimeHours = Math.max(0, netWorkedHours - regularHours);
     overtimeHours = Math.min(overtimeHours, settings.max_daily_overtime);
+  } else if (classification === 'day_off') {
+    // Folga em dia não-útil: registra horários mas não conta hora extra
+    overtimeHours = 0;
   } else {
     // Working on a non-work day = all hours are overtime
     overtimeHours = Math.min(netWorkedHours, settings.max_daily_overtime);
