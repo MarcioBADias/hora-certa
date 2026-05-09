@@ -104,7 +104,7 @@ const Reports = () => {
         overtime: manualCalc?.overtimeHours || 0,
       };
     });
-  }, [entries, punches, settings]);
+  }, [entries, punches, settings, overridesByDate]);
 
   const totals = useMemo(() => {
     return {
