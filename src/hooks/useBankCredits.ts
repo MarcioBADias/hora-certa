@@ -119,7 +119,7 @@ export function useBankCredits() {
 
       for (const [dateStr, dayEntries] of Object.entries(monthEntries)) {
         if (dayEntries.length === 0) continue;
-        const calc = calculateDay(dateStr, dayEntries, settings);
+        const calc = calculateDay(dateStr, dayEntries, settings, overridesByDate[dateStr]);
         dayCalcs.push(calc);
         dayDetailMap[dateStr] = calc;
       }
