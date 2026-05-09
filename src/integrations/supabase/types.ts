@@ -53,6 +53,33 @@ export type Database = {
         }
         Relationships: []
       }
+      day_overrides: {
+        Row: {
+          classification: string
+          created_at: string
+          date: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          classification: string
+          created_at?: string
+          date: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          classification?: string
+          created_at?: string
+          date?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       hour_bank: {
         Row: {
           created_at: string
