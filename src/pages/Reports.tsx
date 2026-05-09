@@ -60,6 +60,7 @@ const Reports = () => {
   const { entries } = useTimeEntries(range.start, range.end);
   const { punches } = useClockPunches(range.start, range.end);
   const { settings } = useSettings();
+  const { overridesByDate } = useDayOverrides(range.start, range.end);
 
   // Build unified report rows
   const reportRows = useMemo(() => {
