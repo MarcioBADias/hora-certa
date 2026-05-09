@@ -77,7 +77,7 @@ const Reports = () => {
       let manualHours = 0;
       let manualCalc = null;
       if (dayEntries.length > 0 && settings) {
-        manualCalc = calculateDay(date, dayEntries, settings);
+        manualCalc = calculateDay(date, dayEntries, settings, overridesByDate[date]);
         manualHours = manualCalc.netWorkedHours;
       }
 
