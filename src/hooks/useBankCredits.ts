@@ -35,6 +35,7 @@ export function useBankCredits() {
   const { punches } = useClockPunches();
   const { settings } = useSettings();
   const { entries: bankEntries } = useHourBank();
+  const { overridesByDate } = useDayOverrides();
 
   // Paid overrides stored in hour_bank with type='paid_override'
   const paidOverrides = useMemo(() => {
