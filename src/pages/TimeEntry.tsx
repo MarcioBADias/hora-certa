@@ -830,6 +830,30 @@ const TimeEntry = () => {
           </div>
         </DialogContent>
       </Dialog>
+      {/* Day classification dialog (non-work day) */}
+      <AlertDialog open={!!classifyDialog} onOpenChange={(open) => { if (!open) { classifyDialog?.onChoose; setClassifyDialog(null); } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Dia fora da escala de trabalho</AlertDialogTitle>
+            <AlertDialogDescription>
+              {classifyDialog && (
+                <>
+                  O dia <strong>{new Date(classifyDialog.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</strong> não está marcado como dia útil nas suas configurações.
+                  <br />Como deseja classificar este dia?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => classifyDialog?.onChoose('day_off')}>
+              Folga (não conta horas)
+            </Button>
+            <Button onClick={() => classifyDialog?.onChoose('overtime')}>
+              Hora extra
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
