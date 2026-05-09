@@ -78,6 +78,10 @@ const TimeEntry = () => {
 
   const handleAddEntry = async () => {
     if (!selectedDate) return;
+    if (entryType === 'work') {
+      const classification = await ensureClassification(selectedDate);
+      if (classification === null) return;
+    }
     try {
       await addEntry.mutateAsync({
         date: selectedDate,
