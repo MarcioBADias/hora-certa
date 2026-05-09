@@ -125,14 +125,14 @@ const Dashboard = () => {
   const chartData = useMemo(() => {
     if (!settings) return [];
     return Object.keys(unifiedByDate).sort().map(date => {
-      const calc = calculateDay(date, unifiedByDate[date], settings);
+      const calc = calculateDay(date, unifiedByDate[date], settings, overridesByDate[date]);
       return {
         date: new Date(date + 'T12:00:00').getDate().toString(),
         regular: Math.round(calc.regularHours * 100) / 100,
         overtime: Math.round(calc.overtimeHours * 100) / 100,
       };
     });
-  }, [unifiedByDate, settings]);
+  }, [unifiedByDate, settings, overridesByDate]);
 
   // expiringCredits already computed above from autoCredits
 
