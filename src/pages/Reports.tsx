@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useTimeEntries } from '@/hooks/useTimeEntries';
 import { useClockPunches } from '@/hooks/useClockPunches';
 import { useSettings } from '@/hooks/useSettings';
+import { useDayOverrides } from '@/hooks/useDayOverrides';
 import { calculateDay, formatHoursMinutes, MONTH_NAMES } from '@/lib/calculations';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
