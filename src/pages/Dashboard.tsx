@@ -33,6 +33,7 @@ const Dashboard = () => {
   const { punches } = useClockPunches(startDate, endDate);
   const { entries: bankEntries } = useHourBank();
   const { credits: autoCredits } = useBankCredits();
+  const { overridesByDate } = useDayOverrides(startDate, endDate);
 
   // Calculate real bank balance: auto credits (non-expired) - manual debits
   const balance = useMemo(() => {
