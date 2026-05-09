@@ -166,7 +166,7 @@ export function useBankCredits() {
     }
 
     return result.sort((a, b) => a.month.localeCompare(b.month));
-  }, [entries, punches, settings, paidOverrides]);
+  }, [entries, punches, settings, paidOverrides, overridesByDate]);
 
   return { credits };
 }
