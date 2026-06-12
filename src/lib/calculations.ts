@@ -20,6 +20,10 @@ export interface UserSettings {
   hourly_rate: number | null;
   closing_day: number | null;
   punch_validation_method: PunchValidationMethod;
+  night_shift_start: string; // ex: '23:00'
+  night_shift_end: string;   // ex: '05:00'
+  night_premium_percent: number;    // ex: 20
+  overtime_premium_percent: number; // ex: 50
 }
 
 /**
