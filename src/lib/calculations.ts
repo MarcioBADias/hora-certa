@@ -53,6 +53,8 @@ export interface DayCalculation {
   netWorkedHours: number;
   regularHours: number;
   overtimeHours: number;
+  nightHours: number;          // total horas no período noturno
+  nightOvertimeHours: number;  // horas extras dentro do período noturno
   isWorkDay: boolean;
   dayOfWeek: number;
 }
