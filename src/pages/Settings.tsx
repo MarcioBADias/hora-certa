@@ -326,6 +326,43 @@ const Settings = () => {
         </Card>
       </motion.div>
 
+      {/* Adicional noturno e HE */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Adicional Noturno e Hora Extra</CardTitle>
+            <CardDescription>
+              Horas trabalhadas no período noturno recebem adicional. Quando são horas extras, os percentuais se acumulam (HE + Noturno).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Início do período noturno</Label>
+                <Input type="time" value={nightShiftStart} onChange={e => setNightShiftStart(e.target.value)} />
+              </div>
+              <div>
+                <Label>Fim do período noturno</Label>
+                <Input type="time" value={nightShiftEnd} onChange={e => setNightShiftEnd(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Adicional noturno (%)</Label>
+                <Input type="number" value={nightPremiumPercent} onChange={e => setNightPremiumPercent(Number(e.target.value))} min={0} max={100} step={1} />
+              </div>
+              <div>
+                <Label>Adicional de hora extra (%)</Label>
+                <Input type="number" value={overtimePremiumPercent} onChange={e => setOvertimePremiumPercent(Number(e.target.value))} min={0} max={200} step={1} />
+              </div>
+            </div>
+            <div className="rounded-lg bg-accent/40 p-3 text-xs text-muted-foreground">
+              Ex.: hora extra entre {nightShiftStart} e {nightShiftEnd} = hora normal + {overtimePremiumPercent}% (HE) + {nightPremiumPercent}% (noturno).
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
       {/* Validation method */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
         <Card>
