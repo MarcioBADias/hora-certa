@@ -174,6 +174,10 @@ const Settings = () => {
         monthly_salary: monthlySalary ? parseFloat(monthlySalary) : null,
         closing_day: closingDay ? parseInt(closingDay) : null,
         punch_validation_method: validationMethod,
+        night_shift_start: nightShiftStart,
+        night_shift_end: nightShiftEnd,
+        night_premium_percent: nightPremiumPercent,
+        overtime_premium_percent: overtimePremiumPercent,
       } as any);
       toast.success('Configurações salvas!');
     } catch {
