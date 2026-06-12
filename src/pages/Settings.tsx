@@ -62,6 +62,10 @@ const Settings = () => {
       setMonthlySalary((settings as any).monthly_salary?.toString() || '');
       setClosingDay(settings.closing_day ? String(settings.closing_day) : '');
       setValidationMethod(settings.punch_validation_method || 'none');
+      setNightShiftStart(settings.night_shift_start || '23:00');
+      setNightShiftEnd(settings.night_shift_end || '05:00');
+      setNightPremiumPercent(Number(settings.night_premium_percent ?? 20));
+      setOvertimePremiumPercent(Number(settings.overtime_premium_percent ?? 50));
     }
   }, [settings]);
 
