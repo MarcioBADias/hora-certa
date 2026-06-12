@@ -17,6 +17,10 @@ const DEFAULT_SETTINGS: UserSettings = {
   hourly_rate: null,
   closing_day: null,
   punch_validation_method: 'none',
+  night_shift_start: '23:00',
+  night_shift_end: '05:00',
+  night_premium_percent: 20,
+  overtime_premium_percent: 50,
 };
 
 export function useSettings() {
