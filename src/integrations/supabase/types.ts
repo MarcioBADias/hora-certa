@@ -162,7 +162,11 @@ export type Database = {
           max_daily_overtime: number
           max_monthly_paid_overtime: number
           monthly_salary: number | null
+          night_premium_percent: number
+          night_shift_end: string
+          night_shift_start: string
           opening_time: string
+          overtime_premium_percent: number
           punch_validation_method: string
           updated_at: string
           user_id: string
@@ -181,7 +185,11 @@ export type Database = {
           max_daily_overtime?: number
           max_monthly_paid_overtime?: number
           monthly_salary?: number | null
+          night_premium_percent?: number
+          night_shift_end?: string
+          night_shift_start?: string
           opening_time?: string
+          overtime_premium_percent?: number
           punch_validation_method?: string
           updated_at?: string
           user_id: string
@@ -200,7 +208,11 @@ export type Database = {
           max_daily_overtime?: number
           max_monthly_paid_overtime?: number
           monthly_salary?: number | null
+          night_premium_percent?: number
+          night_shift_end?: string
+          night_shift_start?: string
           opening_time?: string
+          overtime_premium_percent?: number
           punch_validation_method?: string
           updated_at?: string
           user_id?: string

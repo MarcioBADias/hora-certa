@@ -35,6 +35,11 @@ const TimeEntry = () => {
   const [autoPunchDetailDate, setAutoPunchDetailDate] = useState<string | null>(null);
   const [faceCaptureOpen, setFaceCaptureOpen] = useState(false);
   const [classifyDialog, setClassifyDialog] = useState<{ date: string; onChoose: (c: DayClassification) => void } | null>(null);
+  const [crossMidnightDialog, setCrossMidnightDialog] = useState<{
+    yesterday: string;
+    yesterdayNextPunch: number;
+    onChoose: (continueYesterday: boolean) => void;
+  } | null>(null);
   const faceCaptureResolveRef = useRef<((value: Blob | null) => void) | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -246,13 +251,51 @@ const TimeEntry = () => {
   };
 
   const handleClockPunch = useCallback(async () => {
-    if (nextPunchNumber > 4) {
+    // Determine effective date for this punch.
+    // If yesterday has an OPEN shift (1 or 3 punches) AND it's still early today
+    // OR yesterday's last punch was in the evening, ask the user whether this
+    // punch closes yesterday's shift or starts today.
+    const yesterdayDate = new Date();
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    const yesterdayStr = getDateStr(yesterdayDate);
+    const yesterdayPunches = punchesByDate[yesterdayStr] || [];
+    const yesterdayCount = yesterdayPunches.length;
+    const nowHour = new Date().getHours();
+    const lastYesterday = yesterdayPunches.length
+      ? [...yesterdayPunches].sort((a, b) => b.punch_number - a.punch_number)[0]
+      : null;
+    const lastYHour = lastYesterday ? Number(lastYesterday.punch_time.split(':')[0]) : 0;
+    const couldBeCrossMidnight =
+      (yesterdayCount === 1 || yesterdayCount === 3) &&
+      (nowHour < 12 || (lastYHour >= 18 && nowHour < 6));
+
+    let effectiveDate = today;
+    let effectivePunchNumber = nextPunchNumber;
+
+    if (couldBeCrossMidnight) {
+      const continueYesterday = await new Promise<boolean>((resolve) => {
+        setCrossMidnightDialog({
+          yesterday: yesterdayStr,
+          yesterdayNextPunch: yesterdayCount + 1,
+          onChoose: (choice) => {
+            setCrossMidnightDialog(null);
+            resolve(choice);
+          },
+        });
+      });
+      if (continueYesterday) {
+        effectiveDate = yesterdayStr;
+        effectivePunchNumber = yesterdayCount + 1;
+      }
+    }
+
+    if (effectivePunchNumber > 4) {
       toast.error('Todas as 4 marcações do dia já foram feitas');
       return;
     }
 
     // For non-work days, ask user whether it's overtime or day off
-    const classification = await ensureClassification(today);
+    const classification = await ensureClassification(effectiveDate);
     if (classification === null) return;
 
     const validationMethod = settings?.punch_validation_method || 'none';
@@ -297,7 +340,7 @@ const TimeEntry = () => {
       // Upload face photo if captured
       let photoUrl: string | undefined;
       if (photoBlob && user) {
-        const fileName = `${user.id}/${today}_punch_${nextPunchNumber}.jpg`;
+        const fileName = `${user.id}/${effectiveDate}_punch_${effectivePunchNumber}.jpg`;
         const { error: uploadError } = await supabase.storage
           .from('punch-photos')
           .upload(fileName, photoBlob, { contentType: 'image/jpeg', upsert: true });
@@ -310,8 +353,8 @@ const TimeEntry = () => {
       }
 
       await addPunch.mutateAsync({
-        date: today,
-        punch_number: nextPunchNumber,
+        date: effectiveDate,
+        punch_number: effectivePunchNumber,
         punch_time: punchTime,
         latitude,
         longitude,
@@ -319,7 +362,8 @@ const TimeEntry = () => {
         ...(photoUrl ? { photo_url: photoUrl } : {}),
       } as any);
 
-      toast.success(`${PUNCH_LABELS[nextPunchNumber - 1]} registrada às ${punchTime}`);
+      const labelSuffix = effectiveDate !== today ? ' (continuação do dia anterior)' : '';
+      toast.success(`${PUNCH_LABELS[effectivePunchNumber - 1]} registrada às ${punchTime}${labelSuffix}`);
     } catch (err: any) {
       if (err?.code === 1) {
         toast.error('Permissão de localização negada. Habilite a localização para marcar o ponto.');
@@ -333,7 +377,7 @@ const TimeEntry = () => {
     } finally {
       setIsPunching(false);
     }
-  }, [nextPunchNumber, today, addPunch, settings, user]);
+  }, [nextPunchNumber, today, addPunch, settings, user, punchesByDate]);
 
   const handleDeletePunch = async (id: string) => {
     try {
@@ -344,18 +388,20 @@ const TimeEntry = () => {
     }
   };
 
-  // Calculate worked hours from punches for a given date
+  // Calculate worked hours from punches for a given date (cross-midnight aware)
   const getPunchWorkedInfo = (datePunches: typeof punches) => {
     const sorted = [...datePunches].sort((a, b) => a.punch_number - b.punch_number);
     let totalMinutes = 0;
-    // Period 1: punch 1 to 2, Period 2: punch 3 to 4
     for (let i = 0; i < sorted.length - 1; i += 2) {
       const start = sorted[i];
       const end = sorted[i + 1];
       if (start && end) {
         const [sh, sm] = start.punch_time.split(':').map(Number);
         const [eh, em] = end.punch_time.split(':').map(Number);
-        totalMinutes += (eh * 60 + em) - (sh * 60 + sm);
+        let endMin = eh * 60 + em;
+        const startMin = sh * 60 + sm;
+        if (endMin <= startMin) endMin += 24 * 60; // virou o dia
+        totalMinutes += endMin - startMin;
       }
     }
     return { totalMinutes, hours: Math.round((totalMinutes / 60) * 100) / 100 };
@@ -850,6 +896,32 @@ const TimeEntry = () => {
             </Button>
             <Button onClick={() => classifyDialog?.onChoose('overtime')}>
               Hora extra
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Cross-midnight dialog: open shift from yesterday */}
+      <AlertDialog open={!!crossMidnightDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Turno em aberto do dia anterior</AlertDialogTitle>
+            <AlertDialogDescription>
+              {crossMidnightDialog && (
+                <>
+                  Você tem uma marcação em aberto de{' '}
+                  <strong>{new Date(crossMidnightDialog.yesterday + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</strong>.
+                  <br />Esta marcação é a continuação daquele turno (passou da meia-noite) ou é a primeira marcação de hoje?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => crossMidnightDialog?.onChoose(false)}>
+              Primeira marcação de hoje
+            </Button>
+            <Button onClick={() => crossMidnightDialog?.onChoose(true)}>
+              Continuação de ontem
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

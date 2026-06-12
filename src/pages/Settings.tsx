@@ -33,6 +33,10 @@ const Settings = () => {
   const [monthlySalary, setMonthlySalary] = useState<string>('');
   const [closingDay, setClosingDay] = useState<string>('');
   const [validationMethod, setValidationMethod] = useState<PunchValidationMethod>('none');
+  const [nightShiftStart, setNightShiftStart] = useState('23:00');
+  const [nightShiftEnd, setNightShiftEnd] = useState('05:00');
+  const [nightPremiumPercent, setNightPremiumPercent] = useState(20);
+  const [overtimePremiumPercent, setOvertimePremiumPercent] = useState(50);
   const [referencePhotoUrl, setReferencePhotoUrl] = useState<string | null>(null);
   const [capturingRef, setCapturingRef] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -58,6 +62,10 @@ const Settings = () => {
       setMonthlySalary((settings as any).monthly_salary?.toString() || '');
       setClosingDay(settings.closing_day ? String(settings.closing_day) : '');
       setValidationMethod(settings.punch_validation_method || 'none');
+      setNightShiftStart(settings.night_shift_start || '23:00');
+      setNightShiftEnd(settings.night_shift_end || '05:00');
+      setNightPremiumPercent(Number(settings.night_premium_percent ?? 20));
+      setOvertimePremiumPercent(Number(settings.overtime_premium_percent ?? 50));
     }
   }, [settings]);
 
@@ -166,6 +174,10 @@ const Settings = () => {
         monthly_salary: monthlySalary ? parseFloat(monthlySalary) : null,
         closing_day: closingDay ? parseInt(closingDay) : null,
         punch_validation_method: validationMethod,
+        night_shift_start: nightShiftStart,
+        night_shift_end: nightShiftEnd,
+        night_premium_percent: nightPremiumPercent,
+        overtime_premium_percent: overtimePremiumPercent,
       } as any);
       toast.success('Configurações salvas!');
     } catch {
@@ -309,6 +321,43 @@ const Settings = () => {
                   {closingDay ? `O mês fecha no dia ${closingDay}. Ex: Março = dia ${parseInt(closingDay) + 1} de Fev a ${closingDay} de Mar.` : 'Deixe vazio para usar o mês normal (1 a 30/31).'}
                 </p>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Adicional noturno e HE */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Adicional Noturno e Hora Extra</CardTitle>
+            <CardDescription>
+              Horas trabalhadas no período noturno recebem adicional. Quando são horas extras, os percentuais se acumulam (HE + Noturno).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Início do período noturno</Label>
+                <Input type="time" value={nightShiftStart} onChange={e => setNightShiftStart(e.target.value)} />
+              </div>
+              <div>
+                <Label>Fim do período noturno</Label>
+                <Input type="time" value={nightShiftEnd} onChange={e => setNightShiftEnd(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Adicional noturno (%)</Label>
+                <Input type="number" value={nightPremiumPercent} onChange={e => setNightPremiumPercent(Number(e.target.value))} min={0} max={100} step={1} />
+              </div>
+              <div>
+                <Label>Adicional de hora extra (%)</Label>
+                <Input type="number" value={overtimePremiumPercent} onChange={e => setOvertimePremiumPercent(Number(e.target.value))} min={0} max={200} step={1} />
+              </div>
+            </div>
+            <div className="rounded-lg bg-accent/40 p-3 text-xs text-muted-foreground">
+              Ex.: hora extra entre {nightShiftStart} e {nightShiftEnd} = hora normal + {overtimePremiumPercent}% (HE) + {nightPremiumPercent}% (noturno).
             </div>
           </CardContent>
         </Card>

@@ -20,6 +20,10 @@ export interface UserSettings {
   hourly_rate: number | null;
   closing_day: number | null;
   punch_validation_method: PunchValidationMethod;
+  night_shift_start: string; // ex: '23:00'
+  night_shift_end: string;   // ex: '05:00'
+  night_premium_percent: number;    // ex: 20
+  overtime_premium_percent: number; // ex: 50
 }
 
 /**
@@ -49,6 +53,8 @@ export interface DayCalculation {
   netWorkedHours: number;
   regularHours: number;
   overtimeHours: number;
+  nightHours: number;          // total horas no período noturno
+  nightOvertimeHours: number;  // horas extras dentro do período noturno
   isWorkDay: boolean;
   dayOfWeek: number;
 }
@@ -84,6 +90,39 @@ export function getRegularHoursForDay(dayOfWeek: number, workDays: WorkDay[]): n
 
 export type DayClassification = 'overtime' | 'day_off';
 
+/**
+ * Returns minutes (within a 0..2880 timeline anchored at the day's 00:00)
+ * that fall inside the configured night-shift window.
+ * Handles cross-midnight night window (e.g. 23:00 → 05:00).
+ */
+function minutesInNightWindow(
+  startMin: number,
+  endMin: number,
+  nightStart: string,
+  nightEnd: string
+): number {
+  const ns = timeToMinutes(nightStart);
+  const ne = timeToMinutes(nightEnd);
+  // Build night ranges in absolute timeline covering day 0 and day 1.
+  const ranges: [number, number][] = [];
+  for (const offset of [0, 1440]) {
+    if (ne > ns) {
+      ranges.push([ns + offset, ne + offset]);
+    } else {
+      // cross-midnight night window: [ns, 1440) ∪ [0, ne)
+      ranges.push([ns + offset, 1440 + offset]);
+      ranges.push([0 + offset, ne + offset]);
+    }
+  }
+  let total = 0;
+  for (const [rs, re] of ranges) {
+    const a = Math.max(startMin, rs);
+    const b = Math.min(endMin, re);
+    if (b > a) total += b - a;
+  }
+  return total;
+}
+
 export function calculateDay(
   date: string,
   entries: { entry_time: string; exit_time: string }[],
@@ -97,11 +136,20 @@ export function calculateDay(
   const isWorkDay = regularHours > 0;
 
   let totalWorkedMinutes = 0;
+  let totalNightMinutes = 0;
   for (const entry of entries) {
     const start = timeToMinutes(entry.entry_time);
-    const end = timeToMinutes(entry.exit_time);
+    let end = timeToMinutes(entry.exit_time);
+    // Cross-midnight: exit time before entry → shifts to next day
+    if (end <= start) end += 1440;
     if (end > start) {
       totalWorkedMinutes += end - start;
+      totalNightMinutes += minutesInNightWindow(
+        start,
+        end,
+        settings.night_shift_start || '23:00',
+        settings.night_shift_end || '05:00'
+      );
     }
   }
 
@@ -114,12 +162,14 @@ export function calculateDay(
     overtimeHours = Math.max(0, netWorkedHours - regularHours);
     overtimeHours = Math.min(overtimeHours, settings.max_daily_overtime);
   } else if (classification === 'day_off') {
-    // Folga em dia não-útil: registra horários mas não conta hora extra
     overtimeHours = 0;
   } else {
-    // Working on a non-work day = all hours are overtime
     overtimeHours = Math.min(netWorkedHours, settings.max_daily_overtime);
   }
+
+  const nightHours = minutesToHours(totalNightMinutes);
+  // Assume night hours overlap as much as possible with overtime (typical evening OT)
+  const nightOvertimeHours = Math.min(nightHours, overtimeHours);
 
   return {
     date,
@@ -128,6 +178,8 @@ export function calculateDay(
     netWorkedHours: Math.max(0, netWorkedHours),
     regularHours: isWorkDay ? Math.min(netWorkedHours, regularHours) : 0,
     overtimeHours,
+    nightHours: Math.round(nightHours * 100) / 100,
+    nightOvertimeHours: Math.round(nightOvertimeHours * 100) / 100,
     isWorkDay,
     dayOfWeek,
   };
@@ -140,6 +192,10 @@ export interface MonthSummary {
   paidOvertimeHours: number;
   bankOvertimeHours: number;
   estimatedOvertimePay: number | null;
+  totalNightHours: number;
+  nightOvertimeHours: number;
+  nightRegularHours: number;
+  estimatedNightPremium: number | null;
 }
 
 export function calculateMonthSummary(
@@ -149,12 +205,30 @@ export function calculateMonthSummary(
   const totalWorkedHours = dayCalculations.reduce((s, d) => s + d.netWorkedHours, 0);
   const totalRegularHours = dayCalculations.reduce((s, d) => s + d.regularHours, 0);
   const totalOvertimeHours = dayCalculations.reduce((s, d) => s + d.overtimeHours, 0);
-  
+  const totalNightHours = dayCalculations.reduce((s, d) => s + (d.nightHours || 0), 0);
+  const nightOvertimeHours = dayCalculations.reduce((s, d) => s + (d.nightOvertimeHours || 0), 0);
+  const nightRegularHours = Math.max(0, totalNightHours - nightOvertimeHours);
+
   const paidOvertimeHours = Math.min(totalOvertimeHours, settings.max_monthly_paid_overtime);
   const bankOvertimeHours = Math.max(0, totalOvertimeHours - settings.max_monthly_paid_overtime);
-  
+
+  const otPremiumPct = (settings.overtime_premium_percent ?? 50) / 100;
+  const nightPremiumPct = (settings.night_premium_percent ?? 20) / 100;
+
+  // Paid OT pay: hora cheia + adicional de HE; quando dentro do período noturno, soma também o adicional noturno
+  const paidNightOvertime = Math.min(paidOvertimeHours, nightOvertimeHours);
+  const paidRegularOvertime = paidOvertimeHours - paidNightOvertime;
+
   const estimatedOvertimePay = settings.hourly_rate
-    ? Math.round(paidOvertimeHours * settings.hourly_rate * 100) / 100
+    ? Math.round(
+        (paidRegularOvertime * settings.hourly_rate * (1 + otPremiumPct) +
+          paidNightOvertime * settings.hourly_rate * (1 + otPremiumPct + nightPremiumPct)) * 100
+      ) / 100
+    : null;
+
+  // Adicional noturno aplicado também sobre horas regulares no período noturno
+  const estimatedNightPremium = settings.hourly_rate
+    ? Math.round(nightRegularHours * settings.hourly_rate * nightPremiumPct * 100) / 100
     : null;
 
   return {
@@ -164,6 +238,10 @@ export function calculateMonthSummary(
     paidOvertimeHours: Math.round(paidOvertimeHours * 100) / 100,
     bankOvertimeHours: Math.round(bankOvertimeHours * 100) / 100,
     estimatedOvertimePay,
+    totalNightHours: Math.round(totalNightHours * 100) / 100,
+    nightOvertimeHours: Math.round(nightOvertimeHours * 100) / 100,
+    nightRegularHours: Math.round(nightRegularHours * 100) / 100,
+    estimatedNightPremium,
   };
 }
 

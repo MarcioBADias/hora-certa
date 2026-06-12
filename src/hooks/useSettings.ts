@@ -17,6 +17,10 @@ const DEFAULT_SETTINGS: UserSettings = {
   hourly_rate: null,
   closing_day: null,
   punch_validation_method: 'none',
+  night_shift_start: '23:00',
+  night_shift_end: '05:00',
+  night_premium_percent: 20,
+  overtime_premium_percent: 50,
 };
 
 export function useSettings() {
@@ -39,6 +43,10 @@ export function useSettings() {
         work_days: parseWorkDays(data.work_days),
         closing_day: (data as any).closing_day ?? null,
         punch_validation_method: ((data as any).punch_validation_method || 'none') as PunchValidationMethod,
+        night_shift_start: (data as any).night_shift_start || '23:00',
+        night_shift_end: (data as any).night_shift_end || '05:00',
+        night_premium_percent: Number((data as any).night_premium_percent ?? 20),
+        overtime_premium_percent: Number((data as any).overtime_premium_percent ?? 50),
       };
     },
     enabled: !!user,

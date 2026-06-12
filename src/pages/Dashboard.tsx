@@ -111,11 +111,20 @@ const Dashboard = () => {
       const paidOverride = currentMonthCredit.paidOvertimeHours;
       const bankOverride = Math.max(0, baseSummary.totalOvertimeHours - paidOverride);
       const hourlyRate = settings.hourly_rate;
+      const otPct = (settings.overtime_premium_percent ?? 50) / 100;
+      const nightPct = (settings.night_premium_percent ?? 20) / 100;
+      const paidNightOT = Math.min(paidOverride, baseSummary.nightOvertimeHours);
+      const paidRegularOT = paidOverride - paidNightOT;
       return {
         ...baseSummary,
         paidOvertimeHours: paidOverride,
         bankOvertimeHours: bankOverride,
-        estimatedOvertimePay: hourlyRate ? Math.round(paidOverride * hourlyRate * 100) / 100 : null,
+        estimatedOvertimePay: hourlyRate
+          ? Math.round(
+              (paidRegularOT * hourlyRate * (1 + otPct) +
+                paidNightOT * hourlyRate * (1 + otPct + nightPct)) * 100
+            ) / 100
+          : null,
       };
     }
 
