@@ -192,6 +192,10 @@ export interface MonthSummary {
   paidOvertimeHours: number;
   bankOvertimeHours: number;
   estimatedOvertimePay: number | null;
+  totalNightHours: number;
+  nightOvertimeHours: number;
+  nightRegularHours: number;
+  estimatedNightPremium: number | null;
 }
 
 export function calculateMonthSummary(
@@ -201,12 +205,30 @@ export function calculateMonthSummary(
   const totalWorkedHours = dayCalculations.reduce((s, d) => s + d.netWorkedHours, 0);
   const totalRegularHours = dayCalculations.reduce((s, d) => s + d.regularHours, 0);
   const totalOvertimeHours = dayCalculations.reduce((s, d) => s + d.overtimeHours, 0);
-  
+  const totalNightHours = dayCalculations.reduce((s, d) => s + (d.nightHours || 0), 0);
+  const nightOvertimeHours = dayCalculations.reduce((s, d) => s + (d.nightOvertimeHours || 0), 0);
+  const nightRegularHours = Math.max(0, totalNightHours - nightOvertimeHours);
+
   const paidOvertimeHours = Math.min(totalOvertimeHours, settings.max_monthly_paid_overtime);
   const bankOvertimeHours = Math.max(0, totalOvertimeHours - settings.max_monthly_paid_overtime);
-  
+
+  const otPremiumPct = (settings.overtime_premium_percent ?? 50) / 100;
+  const nightPremiumPct = (settings.night_premium_percent ?? 20) / 100;
+
+  // Paid OT pay: hora cheia + adicional de HE; quando dentro do período noturno, soma também o adicional noturno
+  const paidNightOvertime = Math.min(paidOvertimeHours, nightOvertimeHours);
+  const paidRegularOvertime = paidOvertimeHours - paidNightOvertime;
+
   const estimatedOvertimePay = settings.hourly_rate
-    ? Math.round(paidOvertimeHours * settings.hourly_rate * 100) / 100
+    ? Math.round(
+        (paidRegularOvertime * settings.hourly_rate * (1 + otPremiumPct) +
+          paidNightOvertime * settings.hourly_rate * (1 + otPremiumPct + nightPremiumPct)) * 100
+      ) / 100
+    : null;
+
+  // Adicional noturno aplicado também sobre horas regulares no período noturno
+  const estimatedNightPremium = settings.hourly_rate
+    ? Math.round(nightRegularHours * settings.hourly_rate * nightPremiumPct * 100) / 100
     : null;
 
   return {
@@ -216,6 +238,10 @@ export function calculateMonthSummary(
     paidOvertimeHours: Math.round(paidOvertimeHours * 100) / 100,
     bankOvertimeHours: Math.round(bankOvertimeHours * 100) / 100,
     estimatedOvertimePay,
+    totalNightHours: Math.round(totalNightHours * 100) / 100,
+    nightOvertimeHours: Math.round(nightOvertimeHours * 100) / 100,
+    nightRegularHours: Math.round(nightRegularHours * 100) / 100,
+    estimatedNightPremium,
   };
 }
 
