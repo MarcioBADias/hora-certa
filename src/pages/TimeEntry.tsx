@@ -340,7 +340,7 @@ const TimeEntry = () => {
       // Upload face photo if captured
       let photoUrl: string | undefined;
       if (photoBlob && user) {
-        const fileName = `${user.id}/${today}_punch_${nextPunchNumber}.jpg`;
+        const fileName = `${user.id}/${effectiveDate}_punch_${effectivePunchNumber}.jpg`;
         const { error: uploadError } = await supabase.storage
           .from('punch-photos')
           .upload(fileName, photoBlob, { contentType: 'image/jpeg', upsert: true });
@@ -353,8 +353,8 @@ const TimeEntry = () => {
       }
 
       await addPunch.mutateAsync({
-        date: today,
-        punch_number: nextPunchNumber,
+        date: effectiveDate,
+        punch_number: effectivePunchNumber,
         punch_time: punchTime,
         latitude,
         longitude,
@@ -362,7 +362,8 @@ const TimeEntry = () => {
         ...(photoUrl ? { photo_url: photoUrl } : {}),
       } as any);
 
-      toast.success(`${PUNCH_LABELS[nextPunchNumber - 1]} registrada às ${punchTime}`);
+      const labelSuffix = effectiveDate !== today ? ' (continuação do dia anterior)' : '';
+      toast.success(`${PUNCH_LABELS[effectivePunchNumber - 1]} registrada às ${punchTime}${labelSuffix}`);
     } catch (err: any) {
       if (err?.code === 1) {
         toast.error('Permissão de localização negada. Habilite a localização para marcar o ponto.');
@@ -376,7 +377,7 @@ const TimeEntry = () => {
     } finally {
       setIsPunching(false);
     }
-  }, [nextPunchNumber, today, addPunch, settings, user]);
+  }, [nextPunchNumber, today, addPunch, settings, user, punchesByDate]);
 
   const handleDeletePunch = async (id: string) => {
     try {
