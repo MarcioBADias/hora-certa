@@ -90,6 +90,39 @@ export function getRegularHoursForDay(dayOfWeek: number, workDays: WorkDay[]): n
 
 export type DayClassification = 'overtime' | 'day_off';
 
+/**
+ * Returns minutes (within a 0..2880 timeline anchored at the day's 00:00)
+ * that fall inside the configured night-shift window.
+ * Handles cross-midnight night window (e.g. 23:00 → 05:00).
+ */
+function minutesInNightWindow(
+  startMin: number,
+  endMin: number,
+  nightStart: string,
+  nightEnd: string
+): number {
+  const ns = timeToMinutes(nightStart);
+  const ne = timeToMinutes(nightEnd);
+  // Build night ranges in absolute timeline covering day 0 and day 1.
+  const ranges: [number, number][] = [];
+  for (const offset of [0, 1440]) {
+    if (ne > ns) {
+      ranges.push([ns + offset, ne + offset]);
+    } else {
+      // cross-midnight night window: [ns, 1440) ∪ [0, ne)
+      ranges.push([ns + offset, 1440 + offset]);
+      ranges.push([0 + offset, ne + offset]);
+    }
+  }
+  let total = 0;
+  for (const [rs, re] of ranges) {
+    const a = Math.max(startMin, rs);
+    const b = Math.min(endMin, re);
+    if (b > a) total += b - a;
+  }
+  return total;
+}
+
 export function calculateDay(
   date: string,
   entries: { entry_time: string; exit_time: string }[],
@@ -103,11 +136,20 @@ export function calculateDay(
   const isWorkDay = regularHours > 0;
 
   let totalWorkedMinutes = 0;
+  let totalNightMinutes = 0;
   for (const entry of entries) {
     const start = timeToMinutes(entry.entry_time);
-    const end = timeToMinutes(entry.exit_time);
+    let end = timeToMinutes(entry.exit_time);
+    // Cross-midnight: exit time before entry → shifts to next day
+    if (end <= start) end += 1440;
     if (end > start) {
       totalWorkedMinutes += end - start;
+      totalNightMinutes += minutesInNightWindow(
+        start,
+        end,
+        settings.night_shift_start || '23:00',
+        settings.night_shift_end || '05:00'
+      );
     }
   }
 
@@ -120,12 +162,14 @@ export function calculateDay(
     overtimeHours = Math.max(0, netWorkedHours - regularHours);
     overtimeHours = Math.min(overtimeHours, settings.max_daily_overtime);
   } else if (classification === 'day_off') {
-    // Folga em dia não-útil: registra horários mas não conta hora extra
     overtimeHours = 0;
   } else {
-    // Working on a non-work day = all hours are overtime
     overtimeHours = Math.min(netWorkedHours, settings.max_daily_overtime);
   }
+
+  const nightHours = minutesToHours(totalNightMinutes);
+  // Assume night hours overlap as much as possible with overtime (typical evening OT)
+  const nightOvertimeHours = Math.min(nightHours, overtimeHours);
 
   return {
     date,
@@ -134,6 +178,8 @@ export function calculateDay(
     netWorkedHours: Math.max(0, netWorkedHours),
     regularHours: isWorkDay ? Math.min(netWorkedHours, regularHours) : 0,
     overtimeHours,
+    nightHours: Math.round(nightHours * 100) / 100,
+    nightOvertimeHours: Math.round(nightOvertimeHours * 100) / 100,
     isWorkDay,
     dayOfWeek,
   };
