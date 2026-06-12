@@ -35,6 +35,11 @@ const TimeEntry = () => {
   const [autoPunchDetailDate, setAutoPunchDetailDate] = useState<string | null>(null);
   const [faceCaptureOpen, setFaceCaptureOpen] = useState(false);
   const [classifyDialog, setClassifyDialog] = useState<{ date: string; onChoose: (c: DayClassification) => void } | null>(null);
+  const [crossMidnightDialog, setCrossMidnightDialog] = useState<{
+    yesterday: string;
+    yesterdayNextPunch: number;
+    onChoose: (continueYesterday: boolean) => void;
+  } | null>(null);
   const faceCaptureResolveRef = useRef<((value: Blob | null) => void) | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
