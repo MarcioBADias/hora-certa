@@ -388,18 +388,20 @@ const TimeEntry = () => {
     }
   };
 
-  // Calculate worked hours from punches for a given date
+  // Calculate worked hours from punches for a given date (cross-midnight aware)
   const getPunchWorkedInfo = (datePunches: typeof punches) => {
     const sorted = [...datePunches].sort((a, b) => a.punch_number - b.punch_number);
     let totalMinutes = 0;
-    // Period 1: punch 1 to 2, Period 2: punch 3 to 4
     for (let i = 0; i < sorted.length - 1; i += 2) {
       const start = sorted[i];
       const end = sorted[i + 1];
       if (start && end) {
         const [sh, sm] = start.punch_time.split(':').map(Number);
         const [eh, em] = end.punch_time.split(':').map(Number);
-        totalMinutes += (eh * 60 + em) - (sh * 60 + sm);
+        let endMin = eh * 60 + em;
+        const startMin = sh * 60 + sm;
+        if (endMin <= startMin) endMin += 24 * 60; // virou o dia
+        totalMinutes += endMin - startMin;
       }
     }
     return { totalMinutes, hours: Math.round((totalMinutes / 60) * 100) / 100 };
