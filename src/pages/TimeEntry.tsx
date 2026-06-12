@@ -251,13 +251,51 @@ const TimeEntry = () => {
   };
 
   const handleClockPunch = useCallback(async () => {
-    if (nextPunchNumber > 4) {
+    // Determine effective date for this punch.
+    // If yesterday has an OPEN shift (1 or 3 punches) AND it's still early today
+    // OR yesterday's last punch was in the evening, ask the user whether this
+    // punch closes yesterday's shift or starts today.
+    const yesterdayDate = new Date();
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    const yesterdayStr = getDateStr(yesterdayDate);
+    const yesterdayPunches = punchesByDate[yesterdayStr] || [];
+    const yesterdayCount = yesterdayPunches.length;
+    const nowHour = new Date().getHours();
+    const lastYesterday = yesterdayPunches.length
+      ? [...yesterdayPunches].sort((a, b) => b.punch_number - a.punch_number)[0]
+      : null;
+    const lastYHour = lastYesterday ? Number(lastYesterday.punch_time.split(':')[0]) : 0;
+    const couldBeCrossMidnight =
+      (yesterdayCount === 1 || yesterdayCount === 3) &&
+      (nowHour < 12 || (lastYHour >= 18 && nowHour < 6));
+
+    let effectiveDate = today;
+    let effectivePunchNumber = nextPunchNumber;
+
+    if (couldBeCrossMidnight) {
+      const continueYesterday = await new Promise<boolean>((resolve) => {
+        setCrossMidnightDialog({
+          yesterday: yesterdayStr,
+          yesterdayNextPunch: yesterdayCount + 1,
+          onChoose: (choice) => {
+            setCrossMidnightDialog(null);
+            resolve(choice);
+          },
+        });
+      });
+      if (continueYesterday) {
+        effectiveDate = yesterdayStr;
+        effectivePunchNumber = yesterdayCount + 1;
+      }
+    }
+
+    if (effectivePunchNumber > 4) {
       toast.error('Todas as 4 marcações do dia já foram feitas');
       return;
     }
 
     // For non-work days, ask user whether it's overtime or day off
-    const classification = await ensureClassification(today);
+    const classification = await ensureClassification(effectiveDate);
     if (classification === null) return;
 
     const validationMethod = settings?.punch_validation_method || 'none';
