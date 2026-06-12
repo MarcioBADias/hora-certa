@@ -33,6 +33,10 @@ const Settings = () => {
   const [monthlySalary, setMonthlySalary] = useState<string>('');
   const [closingDay, setClosingDay] = useState<string>('');
   const [validationMethod, setValidationMethod] = useState<PunchValidationMethod>('none');
+  const [nightShiftStart, setNightShiftStart] = useState('23:00');
+  const [nightShiftEnd, setNightShiftEnd] = useState('05:00');
+  const [nightPremiumPercent, setNightPremiumPercent] = useState(20);
+  const [overtimePremiumPercent, setOvertimePremiumPercent] = useState(50);
   const [referencePhotoUrl, setReferencePhotoUrl] = useState<string | null>(null);
   const [capturingRef, setCapturingRef] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
