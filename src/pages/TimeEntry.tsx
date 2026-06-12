@@ -900,6 +900,32 @@ const TimeEntry = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Cross-midnight dialog: open shift from yesterday */}
+      <AlertDialog open={!!crossMidnightDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Turno em aberto do dia anterior</AlertDialogTitle>
+            <AlertDialogDescription>
+              {crossMidnightDialog && (
+                <>
+                  Você tem uma marcação em aberto de{' '}
+                  <strong>{new Date(crossMidnightDialog.yesterday + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</strong>.
+                  <br />Esta marcação é a continuação daquele turno (passou da meia-noite) ou é a primeira marcação de hoje?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => crossMidnightDialog?.onChoose(false)}>
+              Primeira marcação de hoje
+            </Button>
+            <Button onClick={() => crossMidnightDialog?.onChoose(true)}>
+              Continuação de ontem
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
